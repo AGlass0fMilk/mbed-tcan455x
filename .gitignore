@@ -2,3 +2,11 @@
 .#*
 .mbed
 mbed_settings.py
+.cproject
+.project
+.settings/*
+BUILD
+GettingStarted.html
+makefile.targets
+mbed_config.h
+mbed_settings.pyc

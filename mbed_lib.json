@@ -1,0 +1,8 @@
+{
+    "name": "tcan4551-driver",
+    "target_overrides": {
+        "*": {
+            "target.device_has_add": ["CAN","CANFD"]
+        }
+    }
+}
