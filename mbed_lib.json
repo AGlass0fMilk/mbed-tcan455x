@@ -1,5 +1,31 @@
 {
-    "name": "tcan4551-driver",
+    "name": "tcan4551",
+    "config": {
+        "default-tcan-mosi": {
+            "help": "Default TCAN MOSI pin. Not used if multiple TCAN interfaces are enabled. This is also the td pin that should be used to instantiate the CAN instance.",
+            "value": "NC"
+        },
+	"default-tcan-miso": {
+            "help": "Default TCAN MISO pin. Not used if multiple TCAN interfaces are enabled. This is also the rd pin that should be used to instantiate the CAN instance",
+            "value": "NC"
+        },
+	"default-tcan-sclk": {
+            "help": "Default TCAN SCLK pin. Not used if multiple TCAN interfaces are enabled",
+            "value": "NC"
+        },
+	"default-tcan-csn": {
+            "help": "Default TCAN CSN  pin. Not used if multiple TCAN interfaces are enabled",
+            "value": "NC"
+        },
+	"default-tcan-nint": {
+	    "help": "Default TCAN nINT pin. Not used if multiple TCAN interfaces are enabled",
+	    "value": "NC"
+	},
+	"multiple-tcan-enable": {
+	    "help": "Enabled the use of multiple TCAN interfaces. Requires more configuration by the application than the single-interface use case.",
+	    "value": false
+	}
+    },
     "target_overrides": {
         "*": {
             "target.device_has_add": ["CAN","CANFD"]
