@@ -29,7 +29,7 @@
  */
 #if MBED_CONF_TCAN4551_NUMBER_OF_TCANS == 1
 
-#include "can_helper.h"
+#include "tcan_helper.h"
 
 #include "platform/mbed_assert.h"
 
