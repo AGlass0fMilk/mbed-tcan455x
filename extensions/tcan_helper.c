@@ -21,7 +21,7 @@
  *
  */
 
-#include "can_helper.h"
+#include "tcan_helper.h"
 
 int pin_instance_tcan(PinName rd, PinName td) {
 

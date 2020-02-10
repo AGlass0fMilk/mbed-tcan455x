@@ -25,7 +25,7 @@
 
 #include "platform/mbed_assert.h"
 
-#include "can_helper.h"
+#include "tcan_helper.h"
 #include "TCAN4551.h"
 
 #if !DEVICE_SPI
