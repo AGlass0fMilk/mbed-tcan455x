@@ -31,7 +31,7 @@ public:
      */
     static TCAN4551& get_tcan_handle(mbed::CAN& can_handle);
 
-    void init(void);
+    virtual void init(void);
 
     /**
      * Sets the frequency of the CAN transmission
@@ -72,12 +72,12 @@ public:
     /**
      * Write a CANMessage to the TCAN4551
      */
-    int write(CAN_Message msg, int cc);
+    virtual int write(CAN_Message msg, int cc);
 
     /**
      * Read a CANMessage from the TCAN4551
      */
-    int read(CAN_Message* msg, int handle = 0);
+    virtual int read(CAN_Message* msg, int handle = 0);
 
     /**
      * Sets the CAN controller to the desired mode
@@ -85,7 +85,7 @@ public:
      * @retval result 0 if mode change failed or unsupported
      *                1 if mode change was successful
      */
-    int mode(CanMode mode);
+    virtual int mode(CanMode mode);
 
     /** Filter out incoming messages
      *
@@ -98,7 +98,7 @@ public:
      *    0 if filter change failed or unsupported,
      *    new filter handle if successful
      */
-    int filter(unsigned int id, unsigned int mask, CANFormat format = CANAny, int handle = 0);
+    virtual int filter(unsigned int id, unsigned int mask, CANFormat format = CANAny, int handle = 0);
 
     /**
      * Resets the TCAN4551
@@ -150,6 +150,10 @@ public:
 
     unsigned char get_write_errors() const {
         return write_errors;
+    }
+
+    mbed::SPI& get_spi_handle() {
+        return spi;
     }
 
 protected:

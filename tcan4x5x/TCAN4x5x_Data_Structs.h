@@ -39,6 +39,10 @@
 #ifndef TCAN4X5X_DATA_STRUCTS_H_
 #define TCAN4X5X_DATA_STRUCTS_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 // ~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*
 //                   Starting with the MCAN Data Structures
 // ~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*
@@ -1131,6 +1135,10 @@ typedef struct
         };
     };
 } TCAN4x5x_DEV_CONFIG;
+
+#ifdef _cplusplus
+}
+#endif
 
 
 #endif /* TCAN4X5X_DATA_STRUCTS_H_ */

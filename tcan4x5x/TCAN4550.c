@@ -76,12 +76,12 @@ uint32_t TCAN4x5x_MCAN_CACHE[9];
  * @return @c true if successfully enabled, otherwise return @c false
  */
 bool
-TCAN4x5x_MCAN_EnableProtectedRegisters(void)
+TCAN4x5x_MCAN_EnableProtectedRegisters(tcan_handle_t handle)
 {
     uint8_t i;
     uint32_t readValue, firstRead;
 
-    firstRead = AHB_READ_32(REG_MCAN_CCCR);
+    firstRead = tcan_spi_read_32(handle, REG_MCAN_CCCR);
     if ((firstRead & (REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT)) == (REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT))
         return true;
 
@@ -90,8 +90,8 @@ TCAN4x5x_MCAN_EnableProtectedRegisters(void)
     // Try up to 5 times to set the CCCR register, if not, then fail config, since we need these bits set to configure the device.
     for (i = 5; i > 0; i--)
     {
-        AHB_WRITE_32(REG_MCAN_CCCR, firstRead | REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT);
-        readValue = AHB_READ_32(REG_MCAN_CCCR);
+        tcan_spi_write_32(handle, REG_MCAN_CCCR, firstRead | REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT);
+        readValue = tcan_spi_read_32(handle, REG_MCAN_CCCR);
 
         if ((readValue & (REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT)) == (REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT))
             return true;
@@ -110,20 +110,20 @@ TCAN4x5x_MCAN_EnableProtectedRegisters(void)
  * @return @c true if successfully enabled, otherwise return @c false
  */
 bool
-TCAN4x5x_MCAN_DisableProtectedRegisters(void)
+TCAN4x5x_MCAN_DisableProtectedRegisters(tcan_handle_t handle)
 {
     uint8_t i;
     uint32_t readValue;
 
-    readValue = AHB_READ_32(REG_MCAN_CCCR);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_CCCR);
     if ((readValue & REG_BITS_MCAN_CCCR_CCE) == 0)
         return true;
 
     // Try up to 5 times to unset the CCCR register, if not, then fail config, since we need these bits set to configure the device.
     for (i = 5; i > 0; i--)
     {
-        AHB_WRITE_32(REG_MCAN_CCCR, (readValue & ~(REG_BITS_MCAN_CCCR_CSA | REG_BITS_MCAN_CCCR_CSR | REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT)));	// Unset these bits
-        readValue = AHB_READ_32(REG_MCAN_CCCR);
+        tcan_spi_write_32(handle, REG_MCAN_CCCR, (readValue & ~(REG_BITS_MCAN_CCCR_CSA | REG_BITS_MCAN_CCCR_CSR | REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT)));	// Unset these bits
+        readValue = tcan_spi_read_32(handle, REG_MCAN_CCCR);
 
         if ((readValue & REG_BITS_MCAN_CCCR_CCE) == 0)
             return true;
@@ -147,7 +147,7 @@ TCAN4x5x_MCAN_DisableProtectedRegisters(void)
  * @return @c true if successfully enabled, otherwise return @c false
  */
 bool
-TCAN4x5x_MCAN_ConfigureCCCRRegister(TCAN4x5x_MCAN_CCCR_Config *cccrConfig)
+TCAN4x5x_MCAN_ConfigureCCCRRegister(tcan_handle_t handle, TCAN4x5x_MCAN_CCCR_Config *cccrConfig)
 {
     uint32_t value, readValue;
 
@@ -159,9 +159,9 @@ TCAN4x5x_MCAN_ConfigureCCCRRegister(TCAN4x5x_MCAN_CCCR_Config *cccrConfig)
     value |= (REG_BITS_MCAN_CCCR_INIT | REG_BITS_MCAN_CCCR_CCE);
 
 
-    AHB_WRITE_32(REG_MCAN_CCCR, value);
+    tcan_spi_write_32(handle, REG_MCAN_CCCR, value);
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
-    readValue = AHB_READ_32(REG_MCAN_CCCR);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_CCCR);
 
     // Need to do these bitwise ANDs to make this work for clock stop requests and not trigger a false failure when comparing read back value
     if ((readValue & ~(REG_BITS_MCAN_CCCR_RESERVED_MASK | REG_BITS_MCAN_CCCR_CSA | REG_BITS_MCAN_CCCR_CSR | REG_BITS_MCAN_CCCR_CCE | REG_BITS_MCAN_CCCR_INIT))
@@ -175,7 +175,7 @@ TCAN4x5x_MCAN_ConfigureCCCRRegister(TCAN4x5x_MCAN_CCCR_Config *cccrConfig)
     if ((readValue & REG_BITS_MCAN_CCCR_CSR) != cccrConfig->CSR)
     {
         // Then there's a difference in the CSR bits, which may not be a failure.
-        if (TCAN4x5x_Device_ReadMode() == TCAN4x5x_DEVICE_MODE_STANDBY)
+        if (TCAN4x5x_Device_ReadMode(handle) == TCAN4x5x_DEVICE_MODE_STANDBY)
         {
             // CSR bit is set due to being in standby mode. Not a failure.
             return true;
@@ -197,9 +197,9 @@ TCAN4x5x_MCAN_ConfigureCCCRRegister(TCAN4x5x_MCAN_CCCR_Config *cccrConfig)
  * @param *cccrConfig is a pointer to a @c TCAN4x5x_MCAN_CCCR_Config struct containing the CCCR bit fields that will be updated
  */
 void
-TCAN4x5x_MCAN_ReadCCCRRegister(TCAN4x5x_MCAN_CCCR_Config *cccrConfig)
+TCAN4x5x_MCAN_ReadCCCRRegister(tcan_handle_t handle, TCAN4x5x_MCAN_CCCR_Config *cccrConfig)
 {
-    cccrConfig->word = AHB_READ_32(REG_MCAN_CCCR);
+    cccrConfig->word = tcan_spi_read_32(handle, REG_MCAN_CCCR);
 }
 
 
@@ -214,12 +214,12 @@ TCAN4x5x_MCAN_ReadCCCRRegister(TCAN4x5x_MCAN_CCCR_Config *cccrConfig)
  * @param *dataTiming is a pointer of a @c TCAN4x5x_MCAN_Data_Timing_Simple struct containing the simplified data timing information
  */
 void
-TCAN4x5x_MCAN_ReadDataTimingFD_Simple(TCAN4x5x_MCAN_Data_Timing_Simple *dataTiming)
+TCAN4x5x_MCAN_ReadDataTimingFD_Simple(tcan_handle_t handle, TCAN4x5x_MCAN_Data_Timing_Simple *dataTiming)
 {
     uint32_t regData;
 
     // Read the data timing register
-    regData = AHB_READ_32(REG_MCAN_DBTP);
+    regData = tcan_spi_read_32(handle, REG_MCAN_DBTP);
 
     // These registers are only writable if CCE and INIT are both set. Sets the nominal bit timing and prescaler information
     dataTiming->DataBitRatePrescaler = ((regData >> 16) & 0x1F) + 1;
@@ -236,12 +236,12 @@ TCAN4x5x_MCAN_ReadDataTimingFD_Simple(TCAN4x5x_MCAN_Data_Timing_Simple *dataTimi
  * @param *dataTiming is a pointer of a @c TCAN4x5x_MCAN_Data_Timing_Simple struct containing the raw data timing information
  */
 void
-TCAN4x5x_MCAN_ReadDataTimingFD_Raw(TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming)
+TCAN4x5x_MCAN_ReadDataTimingFD_Raw(tcan_handle_t handle, TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming)
 {
     uint32_t regData;
 
     // Read the data timing register
-    regData = AHB_READ_32(REG_MCAN_DBTP);
+    regData = tcan_spi_read_32(handle, REG_MCAN_DBTP);
 
     // These registers are only writable if CCE and INIT are both set. Sets the nominal bit timing and prescaler information
     dataTiming->DataBitRatePrescaler = ((regData >> 16) & 0x1F);
@@ -252,7 +252,7 @@ TCAN4x5x_MCAN_ReadDataTimingFD_Raw(TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming)
     if (regData & REG_BITS_MCAN_DBTP_TDC_EN)
     {
         // If TDC is set, then read the TDC register
-        regData = AHB_READ_32(REG_MCAN_TDCR);
+        regData = tcan_spi_read_32(handle, REG_MCAN_TDCR);
         dataTiming->TDCOffset = ((regData >> 8) & 0x7F);
         dataTiming->TDCFilter = (regData & 0x7F);
     } else {
@@ -274,7 +274,7 @@ TCAN4x5x_MCAN_ReadDataTimingFD_Raw(TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming)
  * @return @c true if successfully enabled, otherwise return @c false
  */
 bool
-TCAN4x5x_MCAN_ConfigureDataTiming_Simple(TCAN4x5x_MCAN_Data_Timing_Simple *dataTiming)
+TCAN4x5x_MCAN_ConfigureDataTiming_Simple(tcan_handle_t handle, TCAN4x5x_MCAN_Data_Timing_Simple *dataTiming)
 {
     uint32_t writeValue, TDCOWriteValue;
     uint32_t tempValue;
@@ -313,25 +313,25 @@ TCAN4x5x_MCAN_ConfigureDataTiming_Simple(TCAN4x5x_MCAN_Data_Timing_Simple *dataT
     // NOTE: In most cases, you want to enable Transceiver Delay Compensation Offset and set it to 1 more than what's in the DTSEG1 register in MCAN.
     // Doing this ensures that the secondary sample point is the same as the primary sample point
     writeValue |= REG_BITS_MCAN_DBTP_TDC_EN;
-    AHB_WRITE_32(REG_MCAN_DBTP, writeValue);				// Write the value to the DBTP register
+    tcan_spi_write_32(handle, REG_MCAN_DBTP, writeValue);				// Write the value to the DBTP register
 
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    tempValue = AHB_READ_32(REG_MCAN_DBTP);
+    tempValue = tcan_spi_read_32(handle, REG_MCAN_DBTP);
     if (tempValue != writeValue)
         return false;
 #endif
 
-    AHB_WRITE_32(REG_MCAN_TDCR, TDCOWriteValue);
+    tcan_spi_write_32(handle, REG_MCAN_TDCR, TDCOWriteValue);
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    tempValue = AHB_READ_32(REG_MCAN_TDCR);
+    tempValue = tcan_spi_read_32(handle, REG_MCAN_TDCR);
     if (tempValue != TDCOWriteValue)
         return false;
 #endif
 
     // Configure the Timestamp counter to use an external time stamp value. This is required to use time stamps with CAN FD
-    AHB_WRITE_32(REG_MCAN_TSCC, REG_BITS_MCAN_TSCC_COUNTER_EXTERNAL);
+    tcan_spi_write_32(handle, REG_MCAN_TSCC, REG_BITS_MCAN_TSCC_COUNTER_EXTERNAL);
     return true;
 }
 
@@ -349,7 +349,7 @@ TCAN4x5x_MCAN_ConfigureDataTiming_Simple(TCAN4x5x_MCAN_Data_Timing_Simple *dataT
  * @return @c true if successfully enabled, otherwise return @c false
  */
 bool
-TCAN4x5x_MCAN_ConfigureDataTiming_Raw(TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming)
+TCAN4x5x_MCAN_ConfigureDataTiming_Raw(tcan_handle_t handle, TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming)
 {
     uint32_t writeValue;
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
@@ -365,35 +365,35 @@ TCAN4x5x_MCAN_ConfigureDataTiming_Raw(TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming)
     {
         // If either of these are set, then enable transmitter delay compensation
         writeValue |= REG_BITS_MCAN_DBTP_TDC_EN;
-        AHB_WRITE_32(REG_MCAN_DBTP, writeValue);
+        tcan_spi_write_32(handle, REG_MCAN_DBTP, writeValue);
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
         // Check to see if the write was successful.
-        tempValue = AHB_READ_32(REG_MCAN_DBTP);
+        tempValue = tcan_spi_read_32(handle, REG_MCAN_DBTP);
         if (tempValue != writeValue)
             return false;
 #endif
 
         writeValue = (uint32_t)(dataTiming->TDCOffset & 0x7F) << 8;
         writeValue |= (uint32_t)(dataTiming->TDCFilter & 0x7F);
-        AHB_WRITE_32(REG_MCAN_TDCR, writeValue);
+        tcan_spi_write_32(handle, REG_MCAN_TDCR, writeValue);
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
         // Check to see if the write was successful.
-        tempValue = AHB_READ_32(REG_MCAN_TDCR);
+        tempValue = tcan_spi_read_32(handle, REG_MCAN_TDCR);
         if (tempValue != writeValue)
             return false;
 #endif
     } else {
-        AHB_WRITE_32(REG_MCAN_DBTP, writeValue);
+        tcan_spi_write_32(handle, REG_MCAN_DBTP, writeValue);
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
         // Check to see if the write was successful.
-        tempValue = AHB_READ_32(REG_MCAN_DBTP);
+        tempValue = tcan_spi_read_32(handle, REG_MCAN_DBTP);
         if (tempValue != writeValue)
             return false;
 #endif
     }
 
     // Configure the Timestamp counter to use an external time stamp value. This is required to use time stamps with CAN FD
-    AHB_WRITE_32(REG_MCAN_TSCC, REG_BITS_MCAN_TSCC_COUNTER_EXTERNAL);
+    tcan_spi_write_32(handle, REG_MCAN_TSCC, REG_BITS_MCAN_TSCC_COUNTER_EXTERNAL);
 
     return true;
 }
@@ -407,11 +407,11 @@ TCAN4x5x_MCAN_ConfigureDataTiming_Raw(TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming)
  * @param *nomTiming is a pointer of a @c TCAN4x5x_MCAN_Nominal_Timing_Simple struct containing the simplified nominal timing information
  */
 void
-TCAN4x5x_MCAN_ReadNominalTiming_Simple(TCAN4x5x_MCAN_Nominal_Timing_Simple *nomTiming)
+TCAN4x5x_MCAN_ReadNominalTiming_Simple(tcan_handle_t handle, TCAN4x5x_MCAN_Nominal_Timing_Simple *nomTiming)
 {
     uint32_t readValue;
 
-    readValue = AHB_READ_32(REG_MCAN_NBTP);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_NBTP);
 
     // These registers are only writable if CCE and INIT are both set. Sets the nominal bit timing and prescaler information
     nomTiming->NominalBitRatePrescaler = ((readValue >> 16) & 0x1FF) + 1;
@@ -428,11 +428,11 @@ TCAN4x5x_MCAN_ReadNominalTiming_Simple(TCAN4x5x_MCAN_Nominal_Timing_Simple *nomT
  * @param *nomTiming is a pointer of a @c TCAN4x5x_MCAN_Nominal_Timing_Raw struct containing the raw MCAN nominal timing information
  */
 void
-TCAN4x5x_MCAN_ReadNominalTiming_Raw(TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming)
+TCAN4x5x_MCAN_ReadNominalTiming_Raw(tcan_handle_t handle, TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming)
 {
     uint32_t readValue;
 
-    readValue = AHB_READ_32(REG_MCAN_NBTP);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_NBTP);
 
     // These registers are only writable if CCE and INIT are both set. Sets the nominal bit timing and prescaler information
     nomTiming->NominalSyncJumpWidth = ((readValue >> 25) & 0x7F);
@@ -454,7 +454,7 @@ TCAN4x5x_MCAN_ReadNominalTiming_Raw(TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming)
  * @return @c true if successfully enabled, otherwise return @c false
  */
 bool
-TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(TCAN4x5x_MCAN_Nominal_Timing_Simple *nomTiming)
+TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(tcan_handle_t handle, TCAN4x5x_MCAN_Nominal_Timing_Simple *nomTiming)
 {
     uint32_t writeValue, tempValue;
 
@@ -487,10 +487,10 @@ TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(TCAN4x5x_MCAN_Nominal_Timing_Simple 
     writeValue |= ((uint32_t)(tempValue - 1)) << 25; 	// NSJW is made to match the MCAN after bit time value
 
     // Write value to the NBTP register
-    AHB_WRITE_32(REG_MCAN_NBTP, writeValue);
+    tcan_spi_write_32(handle, REG_MCAN_NBTP, writeValue);
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Check the write was successful
-    tempValue = AHB_READ_32(REG_MCAN_NBTP);
+    tempValue = tcan_spi_read_32(handle, REG_MCAN_NBTP);
     if (tempValue != writeValue)
         return false;
 #endif
@@ -511,7 +511,7 @@ TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(TCAN4x5x_MCAN_Nominal_Timing_Simple 
  * @return @c true if successfully enabled, otherwise return @c false
  */
 bool
-TCAN4x5x_MCAN_ConfigureNominalTiming_Raw(TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming)
+TCAN4x5x_MCAN_ConfigureNominalTiming_Raw(tcan_handle_t handle, TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming)
 {
     uint32_t writeValue;
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
@@ -522,10 +522,10 @@ TCAN4x5x_MCAN_ConfigureNominalTiming_Raw(TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTi
     writeValue |= ((uint32_t)(nomTiming->NominalBitRatePrescaler & 0x1FF)) << 16;
     writeValue |= ((uint32_t)(nomTiming->NominalTimeSeg1andProp)) << 8;
     writeValue |= ((uint32_t)(nomTiming->NominalTimeSeg2 & 0x7F));
-    AHB_WRITE_32(REG_MCAN_NBTP, writeValue);
+    tcan_spi_write_32(handle, REG_MCAN_NBTP, writeValue);
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Check that the write was successful
-    tempValue = AHB_READ_32(REG_MCAN_NBTP);
+    tempValue = tcan_spi_read_32(handle, REG_MCAN_NBTP);
     if (tempValue != writeValue)
         return false;
 #endif
@@ -544,16 +544,16 @@ TCAN4x5x_MCAN_ConfigureNominalTiming_Raw(TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTi
  * @return @c true if successfully enabled, otherwise return @c false
  */
 bool
-TCAN4x5x_MCAN_ConfigureGlobalFilter(TCAN4x5x_MCAN_Global_Filter_Configuration *gfc)
+TCAN4x5x_MCAN_ConfigureGlobalFilter(tcan_handle_t handle, TCAN4x5x_MCAN_Global_Filter_Configuration *gfc)
 {
     uint32_t writeValue, readValue;
 
 
     writeValue = (gfc->word & REG_BITS_MCAN_GFC_MASK);
-    AHB_WRITE_32(REG_MCAN_GFC, writeValue);
+    tcan_spi_write_32(handle, REG_MCAN_GFC, writeValue);
 
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
-    readValue = AHB_READ_32(REG_MCAN_GFC);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_GFC);
 
     // Need to do these bitwise ANDs to make this work for clock stop requests and not trigger a false failure when comparing read back value
     if (readValue != writeValue)
@@ -581,7 +581,7 @@ TCAN4x5x_MCAN_ConfigureGlobalFilter(TCAN4x5x_MCAN_Global_Filter_Configuration *g
  * @return @c true if successful, otherwise return @c false
  */
 bool
-TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
+TCAN4x5x_MRAM_Configure(tcan_handle_t handle, TCAN4x5x_MRAM_Config *MRAMConfig)
 {
     uint16_t startAddress = 0x0000;         // Used to hold the start and end addresses for each section as we write them into the appropriate registers
     uint32_t registerValue = 0;             // Used to create the 32-bit word to write to each register
@@ -600,13 +600,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
         registerValue = ((uint32_t)(MRAMValue) << 16) | ((uint32_t)startAddress);
     }
     startAddress += (4 * (uint16_t)MRAMValue);
-    AHB_WRITE_32(REG_MCAN_SIDFC, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_SIDFC, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_SIDFC] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_SIDFC);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_SIDFC);
     if (readValue != registerValue)
         return false;
 #endif
@@ -623,13 +623,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
         registerValue = ((uint32_t)(MRAMValue) << 16) | ((uint32_t)startAddress);
     }
     startAddress += (8 * (uint16_t)MRAMValue);
-    AHB_WRITE_32(REG_MCAN_XIDFC, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_XIDFC, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_XIDFC] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_XIDFC);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_XIDFC);
     if (readValue != registerValue)
         return false;
 #endif
@@ -647,13 +647,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
         registerValue |= REG_BITS_MCAN_RXF0C_F0OM_OVERWRITE;                            // Also enable overwrite mode when FIFO is full
     }
     startAddress += (((uint32_t)TCAN4x5x_MCAN_TXRXESC_DataByteValue((uint8_t)MRAMConfig->Rx0ElementSize) + 8) * (uint16_t)MRAMValue);
-    AHB_WRITE_32(REG_MCAN_RXF0C, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_RXF0C, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXF0C] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_RXF0C);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_RXF0C);
     if (readValue != registerValue)
         return false;
 #endif
@@ -669,13 +669,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
         registerValue = ((uint32_t)(MRAMValue) << 16) | ((uint32_t)startAddress);
     }
     startAddress += (((uint32_t)TCAN4x5x_MCAN_TXRXESC_DataByteValue((uint8_t)MRAMConfig->Rx1ElementSize) + 8) * (uint16_t)MRAMValue);
-    AHB_WRITE_32(REG_MCAN_RXF1C, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_RXF1C, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXF1C] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_RXF1C);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_RXF1C);
     if (readValue != registerValue)
         return false;
 #endif
@@ -693,13 +693,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
         registerValue = ((uint32_t)startAddress);
     }
     startAddress += (((uint32_t)TCAN4x5x_MCAN_TXRXESC_DataByteValue((uint8_t)MRAMConfig->RxBufElementSize) + 8) * (uint16_t)MRAMValue);
-    AHB_WRITE_32(REG_MCAN_RXBC, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_RXBC, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXBC] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_RXBC);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_RXBC);
 
     if (readValue != registerValue)
         return false;
@@ -716,13 +716,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
         registerValue = ((uint32_t)(MRAMValue) << 16) | ((uint32_t)startAddress);
     }
     startAddress += (8 * (uint16_t)MRAMValue);
-    AHB_WRITE_32(REG_MCAN_TXEFC, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_TXEFC, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_TXEFC] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_TXEFC);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_TXEFC);
     if (readValue != registerValue)
         return false;
 #endif
@@ -740,13 +740,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
         registerValue |= REG_BITS_MCAN_TXBC_TFQM;               // Sets TFQM to 1 (Queue mode), and sets all registers to be generic non-dedicated buffers.
     }
     startAddress += (((uint32_t)TCAN4x5x_MCAN_TXRXESC_DataByteValue((uint8_t)MRAMConfig->TxBufferElementSize) + 8) * (uint16_t)MRAMValue);
-    AHB_WRITE_32(REG_MCAN_TXBC, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_TXBC, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_TXBC] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_TXBC);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_TXBC);
     if (readValue != registerValue)
         return false;
 #endif
@@ -758,13 +758,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
 
     // Set the RX Element Size Register
     registerValue = ((uint32_t)(MRAMConfig->RxBufElementSize) << 8) | ((uint32_t)(MRAMConfig->Rx1ElementSize) << 4) | (uint32_t)(MRAMConfig->Rx0ElementSize);
-    AHB_WRITE_32(REG_MCAN_RXESC, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_RXESC, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXESC] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_RXESC);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_RXESC);
     if (readValue != registerValue)
         return false;
 #endif
@@ -772,13 +772,13 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
 
     // Set the TX Element Size Register
     registerValue = (uint32_t)(MRAMConfig->TxBufferElementSize);
-    AHB_WRITE_32(REG_MCAN_TXESC, registerValue);
+    tcan_spi_write_32(handle, REG_MCAN_TXESC, registerValue);
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_TXESC] = registerValue;
 #endif
 #ifdef TCAN4x5x_MCAN_VERIFY_CONFIGURATION_WRITES
     // Verify content of register
-    readValue = AHB_READ_32(REG_MCAN_TXESC);
+    readValue = tcan_spi_read_32(handle, REG_MCAN_TXESC);
     if (readValue != registerValue)
         return false;
 #endif
@@ -793,7 +793,7 @@ TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig)
  * Write 0s to every address in MRAM. Useful for initializing the MRAM to known values during initial configuration so that accidental ECC errors do not happen
  */
 void
-TCAN4x5x_MRAM_Clear(void)
+TCAN4x5x_MRAM_Clear(tcan_handle_t handle)
 {
     uint16_t curAddr;
     const uint16_t endAddr = REG_MRAM + MRAM_SIZE;
@@ -803,7 +803,7 @@ TCAN4x5x_MRAM_Clear(void)
 
     while (curAddr < endAddr)
     {
-        AHB_WRITE_32(curAddr, 0);
+        tcan_spi_write_32(handle, curAddr, 0);
         curAddr += 4;
     }
 
@@ -825,7 +825,7 @@ TCAN4x5x_MRAM_Clear(void)
  * @return the number of bytes that were read from the TCAN4x5x and stored into @c dataPayload[]
  */
 uint8_t
-TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_Header *header, uint8_t dataPayload[])
+TCAN4x5x_MCAN_ReadNextFIFO(tcan_handle_t handle, TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_Header *header, uint8_t dataPayload[])
 {
     uint32_t readData;
     uint16_t startAddress;
@@ -836,7 +836,7 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
     {
         default: // RXFIFO0 is default
         {
-            readData = AHB_READ_32(REG_MCAN_RXF0S);
+            readData = tcan_spi_read_32(handle, REG_MCAN_RXF0S);
             if ((readData & 0x0000007F) == 0)
                 return 0;
             getIndex = (uint8_t) ((readData & 0x3F00) >> 8);
@@ -844,13 +844,13 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
             readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXF0C];
 #else
-            readData = AHB_READ_32(REG_MCAN_RXF0C);
+            readData = tcan_spi_read_32(handle, REG_MCAN_RXF0C);
 #endif
             startAddress = (uint16_t)(readData & 0x0000FFFF) + REG_MRAM;
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
             readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXESC];
 #else
-            readData = AHB_READ_32(REG_MCAN_RXESC);
+            readData = tcan_spi_read_32(handle, REG_MCAN_RXESC);
 #endif
             readData &= 0x07;
             elementSize = TCAN4x5x_MCAN_TXRXESC_DataByteValue(readData); // Maximum theoretical data payload supported by this MCAN configuration
@@ -861,7 +861,7 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
 
         case RXFIFO1:
         {
-            readData = AHB_READ_32(REG_MCAN_RXF1S);
+            readData = tcan_spi_read_32(handle, REG_MCAN_RXF1S);
             if ((readData & 0x0000007F) == 0)
                 return 0;
             getIndex = (uint8_t) ((readData & 0x3F00) >> 8);
@@ -869,13 +869,13 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
             readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXF1C];
 #else
-            readData = AHB_READ_32(REG_MCAN_RXF1C);
+            readData = tcan_spi_read_32(handle, REG_MCAN_RXF1C);
 #endif
             startAddress = (uint16_t)(readData & 0x0000FFFF) + REG_MRAM;
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
             readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXESC];
 #else
-            readData = AHB_READ_32(REG_MCAN_RXESC);
+            readData = tcan_spi_read_32(handle, REG_MCAN_RXESC);
 #endif
             readData = (readData & 0x70) >> 4;
             elementSize = TCAN4x5x_MCAN_TXRXESC_DataByteValue(readData); // Maximum theoretical data payload supported by this MCAN configuration
@@ -887,8 +887,8 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
 
 
     // Read the data, start with a burst read
-    AHB_READ_BURST_START(startAddress, 2);
-    readData = AHB_READ_BURST_READ(); // First header
+    tcan_spi_read_burst_start(handle, startAddress, 2);
+    readData = tcan_spi_read_burst_read(handle); // First header
     header->ESI = (readData & 0x80000000) >> 31;
     header->XTD = (readData & 0x40000000) >> 30;
     header->RTR = (readData & 0x20000000) >> 29;
@@ -898,8 +898,8 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
     else
         header->ID  = (readData & 0x1FFC0000) >> 18;
 
-    readData = AHB_READ_BURST_READ();   // Second header
-    AHB_READ_BURST_END();               // Terminate the burst read
+    readData = tcan_spi_read_burst_read(handle);   // Second header
+    tcan_spi_read_burst_end(handle);               // Terminate the burst read
     header->RXTS    = (readData & 0x0000FFFF);
     header->DLC     = (readData & 0x000F0000) >> 16;
     header->BRS     = (readData & 0x00100000) >> 20;
@@ -915,11 +915,11 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
     // Start a burst read for the number of data bytes we require at the data payload area of the MRAM
     // The equation below ensures that we will always read the correct number of words since the divide truncates any remainders, and we need a ceil()-like function
     if (elementSize > 0) {
-        AHB_READ_BURST_START(startAddress + 8, (elementSize + 3) >> 2);
+        tcan_spi_read_burst_start(handle, startAddress + 8, (elementSize + 3) >> 2);
         i = 0;  // Used to count the number of bytes we have read.
         while (i < elementSize) {
             if ((i % 4) == 0) {
-                readData = AHB_READ_BURST_READ();
+                readData = tcan_spi_read_burst_read(handle);
             }
 
             dataPayload[i] = (uint8_t)((readData >> ((i % 4) * 8)) & 0xFF);
@@ -927,17 +927,17 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
             if (i > elementSize)
                 i = elementSize;
         }
-        AHB_READ_BURST_END(); // Terminate the burst read
+        tcan_spi_read_burst_end(handle); // Terminate the burst read
     }
     // Acknowledge the FIFO read
     switch (FIFODefine)
     {
     default: // RXFIFO0
-        AHB_WRITE_32(REG_MCAN_RXF0A, getIndex);
+        tcan_spi_write_32(handle, REG_MCAN_RXF0A, getIndex);
         break;
 
     case RXFIFO1:
-        AHB_WRITE_32(REG_MCAN_RXF1A, getIndex);
+        tcan_spi_write_32(handle, REG_MCAN_RXF1A, getIndex);
         break;
     }
 
@@ -961,7 +961,7 @@ TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_
  * @return the number of bytes that were read from the TCAN4x5x and stored into @c dataPayload[]
  */
 uint8_t
-TCAN4x5x_MCAN_ReadRXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, uint8_t dataPayload[])
+TCAN4x5x_MCAN_ReadRXBuffer(tcan_handle_t handle, uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, uint8_t dataPayload[])
 {
     uint32_t readData;
     uint16_t startAddress;
@@ -976,13 +976,13 @@ TCAN4x5x_MCAN_ReadRXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, ui
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXBC];
 #else
-    readData = AHB_READ_32(REG_MCAN_RXBC);
+    readData = tcan_spi_read_32(handle, REG_MCAN_RXBC);
 #endif
     startAddress = (uint16_t)(readData & 0x0000FFFF) + REG_MRAM;
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_RXESC];
 #else
-    readData = AHB_READ_32(REG_MCAN_RXESC);
+    readData = tcan_spi_read_32(handle, REG_MCAN_RXESC);
 #endif
     readData = (readData & 0x0700) >> 8;
     elementSize = TCAN4x5x_MCAN_TXRXESC_DataByteValue(readData); // Maximum theoretical data payload supported by this MCAN configuration
@@ -992,8 +992,8 @@ TCAN4x5x_MCAN_ReadRXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, ui
 
 
     // Read the data, start with a burst read
-    AHB_READ_BURST_START(startAddress, 2);
-    readData = AHB_READ_BURST_READ(); // First header
+    tcan_spi_read_burst_start(handle, startAddress, 2);
+    readData = tcan_spi_read_burst_read(handle); // First header
     header->ESI = (readData & 0x80000000) >> 31;
     header->XTD = (readData & 0x40000000) >> 30;
     header->RTR = (readData & 0x20000000) >> 29;
@@ -1003,8 +1003,8 @@ TCAN4x5x_MCAN_ReadRXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, ui
     else
         header->ID  = (readData & 0x1FFC0000) >> 18;
 
-    readData = AHB_READ_BURST_READ();   // Second header
-    AHB_READ_BURST_END();               // Terminate the burst read
+    readData = tcan_spi_read_burst_read(handle);   // Second header
+    tcan_spi_read_burst_end(handle);               // Terminate the burst read
     header->RXTS    = (readData & 0x0000FFFF);
     header->DLC     = (readData & 0x000F0000) >> 16;
     header->BRS     = (readData & 0x00100000) >> 20;
@@ -1020,11 +1020,11 @@ TCAN4x5x_MCAN_ReadRXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, ui
     // Start a burst read for the number of data bytes we require at the data payload area of the MRAM
     // The equation below ensures that we will always read the correct number of words since the divide truncates any remainders, and we need a ceil()-like function
     if (elementSize > 0) {
-        AHB_READ_BURST_START(startAddress + 8, (elementSize + 3) >> 2);
+        tcan_spi_read_burst_start(handle, startAddress + 8, (elementSize + 3) >> 2);
         i = 0;  // Used to count the number of bytes we have read.
         while (i < elementSize) {
             if ((i % 4) == 0) {
-                readData = AHB_READ_BURST_READ();
+                readData = tcan_spi_read_burst_read(handle);
             }
 
             dataPayload[i] = (uint8_t)((readData >> ((i % 4) * 8)) & 0xFF);
@@ -1032,14 +1032,14 @@ TCAN4x5x_MCAN_ReadRXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, ui
             if (i > elementSize)
                 i = elementSize;
         }
-        AHB_READ_BURST_END(); // Terminate the burst read
+        tcan_spi_read_burst_end(handle); // Terminate the burst read
     }
     // Acknowledge the FIFO read
     if (getIndex < 32)
     {
-        AHB_WRITE_32(REG_MCAN_NDAT1, 1 << getIndex);
+        tcan_spi_write_32(handle, REG_MCAN_NDAT1, 1 << getIndex);
     } else {
-        AHB_WRITE_32(REG_MCAN_NDAT2, 1 << (getIndex-32));
+        tcan_spi_write_32(handle, REG_MCAN_NDAT2, 1 << (getIndex-32));
     }
 
 
@@ -1061,7 +1061,7 @@ TCAN4x5x_MCAN_ReadRXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, ui
  * @return the number of bytes that were read from the TCAN4x5x and stored into @c dataPayload[]
  */
 uint32_t
-TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, uint8_t dataPayload[])
+TCAN4x5x_MCAN_WriteTXBuffer(tcan_handle_t handle, uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, uint8_t dataPayload[])
 {
     // Step 1: Get the start address of the
     uint32_t SPIData;
@@ -1073,7 +1073,7 @@ TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, u
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     SPIData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_TXBC];
 #else
-    SPIData = AHB_READ_32(REG_MCAN_TXBC);
+    SPIData = tcan_spi_read_32(handle, REG_MCAN_TXBC);
 #endif
     startAddress = (uint16_t)(SPIData & 0x0000FFFF) + 0x8000;
     // Transmit FIFO and queue numbers
@@ -1091,7 +1091,7 @@ TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, u
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     SPIData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_TXESC];
 #else
-    SPIData = AHB_READ_32(REG_MCAN_TXESC);
+    SPIData = tcan_spi_read_32(handle, REG_MCAN_TXESC);
 #endif
     elementSize = TCAN4x5x_MCAN_TXRXESC_DataByteValue(SPIData & 0x07) + 8;
 
@@ -1104,7 +1104,7 @@ TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, u
         elementSize += 1;
     }
     // Read the data, start with a burst read
-    AHB_WRITE_BURST_START(startAddress, elementSize);
+    tcan_spi_write_burst_start(handle, startAddress, elementSize);
     SPIData = 0;
 
     SPIData         |= ((uint32_t)header->ESI & 0x01) << 31;
@@ -1116,7 +1116,7 @@ TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, u
     else
         SPIData     |= ((uint32_t)header->ID & 0x07FF) << 18;
 
-    AHB_WRITE_BURST_WRITE(SPIData);
+    tcan_spi_write_burst_write(handle, SPIData);
 
     SPIData = 0;
     SPIData         |= ((uint32_t)header->DLC & 0x0F) << 16;
@@ -1124,7 +1124,7 @@ TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, u
     SPIData         |= ((uint32_t)header->FDF & 0x01) << 21;
     SPIData         |= ((uint32_t)header->EFC & 0x01) << 23;
     SPIData         |= ((uint32_t)header->MM & 0xFF) << 24;
-    AHB_WRITE_BURST_WRITE(SPIData);
+    tcan_spi_write_burst_write(handle, SPIData);
 
     // Get the actual data
     elementSize = TCAN4x5x_MCAN_DLCtoBytes(header->DLC & 0x0F); // Returns the number of data bytes
@@ -1139,20 +1139,20 @@ TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, u
                 i++;
             }
 
-            AHB_WRITE_BURST_WRITE(SPIData);
+            tcan_spi_write_burst_write(handle, SPIData);
         } else {
             SPIData |= ((uint32_t)dataPayload[i++]);
             SPIData |= ((uint32_t)dataPayload[i++]) << 8;
             SPIData |= ((uint32_t)dataPayload[i++]) << 16;
             SPIData |= ((uint32_t)dataPayload[i++]) << 24;
 
-            AHB_WRITE_BURST_WRITE(SPIData);
+            tcan_spi_write_burst_write(handle, SPIData);
         }
 
         if (i > elementSize)
             i = elementSize;
     }
-    AHB_WRITE_BURST_END();              // Terminate the burst read
+    tcan_spi_write_burst_end(handle);              // Terminate the burst read
 
     return (uint32_t)1 << bufIndex; // Return the number of bytes retrieved
 }
@@ -1170,7 +1170,7 @@ TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, u
  * @return @c true if the request was queued, @c false if the buffer value was invalid (out of range)
  */
 bool
-TCAN4x5x_MCAN_TransmitBufferContents(uint8_t bufIndex)
+TCAN4x5x_MCAN_TransmitBufferContents(tcan_handle_t handle, uint8_t bufIndex)
 {
     uint32_t writeValue;
     uint8_t requestedBuf = bufIndex;
@@ -1180,7 +1180,7 @@ TCAN4x5x_MCAN_TransmitBufferContents(uint8_t bufIndex)
 
     writeValue = 1 << requestedBuf;
 
-    AHB_WRITE_32(REG_MCAN_TXBAR, writeValue);
+    tcan_spi_write_32(handle, REG_MCAN_TXBAR, writeValue);
     return true;
 }
 
@@ -1196,7 +1196,7 @@ TCAN4x5x_MCAN_TransmitBufferContents(uint8_t bufIndex)
  * @return @c true if write was successful, @c false if not
  */
 bool
-TCAN4x5x_MCAN_WriteSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filter)
+TCAN4x5x_MCAN_WriteSIDFilter(tcan_handle_t handle, uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filter)
 {
     uint32_t readData;
     uint16_t startAddress;
@@ -1204,7 +1204,7 @@ TCAN4x5x_MCAN_WriteSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filt
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_SIDFC];
 #else
-    readData = AHB_READ_32(REG_MCAN_SIDFC);
+    readData = tcan_spi_read_32(handle, REG_MCAN_SIDFC);
 #endif
     getIndex = (readData & 0x00FF0000) >> 16;
     if (filterIndex > getIndex) // Check if the fifo number is valid and within range. If not, then fail
@@ -1216,10 +1216,10 @@ TCAN4x5x_MCAN_WriteSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filt
     // Calculate the actual start address for the latest index
     startAddress += (getIndex << 2);                // Multiply by 4 and add to start address
 
-    AHB_WRITE_32(startAddress, filter->word);       // Write the value to the register
+    tcan_spi_write_32(handle, startAddress, filter->word);       // Write the value to the register
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Verify that write was successful
-    readData = AHB_READ_32(startAddress);
+    readData = tcan_spi_read_32(handle, startAddress);
     if (readData != filter->word)
         return false;
 #endif
@@ -1238,7 +1238,7 @@ TCAN4x5x_MCAN_WriteSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filt
  * @return @c true if read was successful, @c false if not
  */
 bool
-TCAN4x5x_MCAN_ReadSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filter)
+TCAN4x5x_MCAN_ReadSIDFilter(tcan_handle_t handle, uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filter)
 {
     uint32_t readData;
     uint16_t startAddress;
@@ -1246,7 +1246,7 @@ TCAN4x5x_MCAN_ReadSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filte
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_SIDFC];
 #else
-    readData = AHB_READ_32(REG_MCAN_SIDFC);
+    readData = tcan_spi_read_32(handle, REG_MCAN_SIDFC);
 #endif
     getIndex = (readData & 0x00FF0000) >> 16;
     if (filterIndex > getIndex) // Check if the fifo number is valid and within range. If not, then fail
@@ -1258,7 +1258,7 @@ TCAN4x5x_MCAN_ReadSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filte
     // Calculate the actual start address for the latest index
     startAddress += (getIndex << 2);                // Multiply by 4 and add to start address
 
-    filter->word = AHB_READ_32(startAddress);       // Read the value from the MRAM
+    filter->word = tcan_spi_read_32(handle, startAddress);       // Read the value from the MRAM
     return true;
 }
 
@@ -1274,7 +1274,7 @@ TCAN4x5x_MCAN_ReadSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filte
  * @return @c true if write was successful, @c false if not
  */
 bool
-TCAN4x5x_MCAN_WriteXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filter)
+TCAN4x5x_MCAN_WriteXIDFilter(tcan_handle_t handle, uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filter)
 {
     uint32_t readData, writeData;
     uint16_t startAddress;
@@ -1282,7 +1282,7 @@ TCAN4x5x_MCAN_WriteXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filt
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_XIDFC];
 #else
-    readData = AHB_READ_32(REG_MCAN_XIDFC);
+    readData = tcan_spi_read_32(handle, REG_MCAN_XIDFC);
 #endif
     getIndex = (readData & 0x00FF0000) >> 16;
     if (filterIndex > getIndex) // Check if the fifo number is valid and within range. If not, then fail
@@ -1297,9 +1297,9 @@ TCAN4x5x_MCAN_WriteXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filt
     // Write the 2 words to memory
     writeData = (uint32_t)(filter->EFEC) << 29;
     writeData |= (uint32_t)(filter->EFID1);
-    AHB_WRITE_32(startAddress, writeData);      // Write the value to the register
+    tcan_spi_write_32(handle, startAddress, writeData);      // Write the value to the register
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
-    readData = AHB_READ_32(startAddress);
+    readData = tcan_spi_read_32(handle, startAddress);
     if (readData != writeData)
         return false;
 #endif
@@ -1307,9 +1307,9 @@ TCAN4x5x_MCAN_WriteXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filt
     startAddress += 4;
     writeData = (uint32_t)(filter->EFT) << 30;
     writeData |= (uint32_t)(filter->EFID2);
-    AHB_WRITE_32(startAddress, writeData);      // Write the value to the register
+    tcan_spi_write_32(handle, startAddress, writeData);      // Write the value to the register
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
-    readData = AHB_READ_32(startAddress);
+    readData = tcan_spi_read_32(handle, startAddress);
     if (readData != writeData)
         return false;
 #endif
@@ -1329,7 +1329,7 @@ TCAN4x5x_MCAN_WriteXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filt
  * @return @c true if read was successful, @c false if not
  */
 bool
-TCAN4x5x_MCAN_ReadXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filter)
+TCAN4x5x_MCAN_ReadXIDFilter(tcan_handle_t handle, uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filter)
 {
     uint32_t readData;
     uint16_t startAddress;
@@ -1337,7 +1337,7 @@ TCAN4x5x_MCAN_ReadXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filte
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
     readData = TCAN4x5x_MCAN_CACHE[TCAN4x5x_MCAN_CACHE_XIDFC];
 #else
-    readData = AHB_READ_32(REG_MCAN_XIDFC);
+    readData = tcan_spi_read_32(handle, REG_MCAN_XIDFC);
 #endif
     getIndex = (readData & 0x00FF0000) >> 16;
     if (filterIndex > getIndex) // Check if the fifo number is valid and within range. If not, then fail
@@ -1349,14 +1349,14 @@ TCAN4x5x_MCAN_ReadXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filte
     // Calculate the actual start address for the latest index
     startAddress += (getIndex << 3);    // Multiply by 4 and add to start address
 
-    AHB_READ_BURST_START(startAddress, 2);      // Send SPI header for a burst SPI read of 2 words
-    readData = AHB_READ_BURST_READ();            // Read first word from MRAM
+    tcan_spi_read_burst_start(handle, startAddress, 2);      // Send SPI header for a burst SPI read of 2 words
+    readData = tcan_spi_read_burst_read(handle);            // Read first word from MRAM
 
     filter->EFEC = (TCAN4x5x_XID_EFEC_Values)((readData >> 29) & 0x07);
     filter->EFID1 = readData & 0x1FFFFFFF;
 
-    readData = AHB_READ_BURST_READ();           // Read second word from MRAM
-    AHB_READ_BURST_END();                       // Terminate the SPI transaction
+    readData = tcan_spi_read_burst_read(handle);           // Read second word from MRAM
+    tcan_spi_read_burst_end(handle);                       // Terminate the SPI transaction
     filter->EFT = (TCAN4x5x_XID_EFT_Values)((readData >> 30) & 0x03);
     filter->EFID2 = readData & 0x1FFFFFFF;
 
@@ -1372,9 +1372,9 @@ TCAN4x5x_MCAN_ReadXIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_XID_Filter *filte
  * @param *ir is a pointer to a @c TCAN4x5x_MCAN_Interrupts struct containing the interrupt bit fields that will be updated
  */
 void
-TCAN4x5x_MCAN_ReadInterrupts(TCAN4x5x_MCAN_Interrupts *ir)
+TCAN4x5x_MCAN_ReadInterrupts(tcan_handle_t handle, TCAN4x5x_MCAN_Interrupts *ir)
 {
-    ir->word = AHB_READ_32(REG_MCAN_IR);
+    ir->word = tcan_spi_read_32(handle, REG_MCAN_IR);
 }
 
 
@@ -1386,9 +1386,9 @@ TCAN4x5x_MCAN_ReadInterrupts(TCAN4x5x_MCAN_Interrupts *ir)
  * @param *ir is a pointer to a @c TCAN4x5x_MCAN_Interrupts struct containing the interrupt bit fields that will be updated
  */
 void
-TCAN4x5x_MCAN_ClearInterrupts(TCAN4x5x_MCAN_Interrupts *ir)
+TCAN4x5x_MCAN_ClearInterrupts(tcan_handle_t handle, TCAN4x5x_MCAN_Interrupts *ir)
 {
-    AHB_WRITE_32(REG_MCAN_IR, ir->word);
+    tcan_spi_write_32(handle, REG_MCAN_IR, ir->word);
 }
 
 
@@ -1398,9 +1398,9 @@ TCAN4x5x_MCAN_ClearInterrupts(TCAN4x5x_MCAN_Interrupts *ir)
  * Clears all MCAN interrupts
  */
 void
-TCAN4x5x_MCAN_ClearInterruptsAll(void)
+TCAN4x5x_MCAN_ClearInterruptsAll(tcan_handle_t handle)
 {
-    AHB_WRITE_32(REG_MCAN_IR, 0xFFFFFFFF);
+    tcan_spi_write_32(handle, REG_MCAN_IR, 0xFFFFFFFF);
 }
 
 
@@ -1412,9 +1412,9 @@ TCAN4x5x_MCAN_ClearInterruptsAll(void)
  * @param *ie is a pointer to a @c TCAN4x5x_MCAN_Interrupt_Enable struct containing the interrupt bit fields that will be updated
  */
 void
-TCAN4x5x_MCAN_ReadInterruptEnable(TCAN4x5x_MCAN_Interrupt_Enable *ie)
+TCAN4x5x_MCAN_ReadInterruptEnable(tcan_handle_t handle, TCAN4x5x_MCAN_Interrupt_Enable *ie)
 {
-    ie->word = AHB_READ_32(REG_MCAN_IE);
+    ie->word = tcan_spi_read_32(handle, REG_MCAN_IE);
 }
 
 
@@ -1427,10 +1427,10 @@ TCAN4x5x_MCAN_ReadInterruptEnable(TCAN4x5x_MCAN_Interrupt_Enable *ie)
  * @param *ie is a pointer to a @c TCAN4x5x_MCAN_Interrupt_Enable struct containing the desired enabled interrupt bits
  */
 void
-TCAN4x5x_MCAN_ConfigureInterruptEnable(TCAN4x5x_MCAN_Interrupt_Enable *ie)
+TCAN4x5x_MCAN_ConfigureInterruptEnable(tcan_handle_t handle, TCAN4x5x_MCAN_Interrupt_Enable *ie)
 {
-    AHB_WRITE_32(REG_MCAN_IE, ie->word);
-    AHB_WRITE_32(REG_MCAN_ILE, REG_BITS_MCAN_ILE_EINT0);		// This is necessary to enable the MCAN Int mux to the output nINT pin
+    tcan_spi_write_32(handle, REG_MCAN_IE, ie->word);
+    tcan_spi_write_32(handle, REG_MCAN_ILE, REG_BITS_MCAN_ILE_EINT0);		// This is necessary to enable the MCAN Int mux to the output nINT pin
 }
 
 
@@ -1483,11 +1483,11 @@ TCAN4x5x_MCAN_TXRXESC_DataByteValue(uint8_t inputESCValue)
  * @return The register value for the device version register
  */
 uint16_t
-TCAN4x5x_Device_ReadDeviceVersion(void)
+TCAN4x5x_Device_ReadDeviceVersion(tcan_handle_t handle)
 {
     uint32_t readValue;
 
-    readValue = AHB_READ_32(REG_SPI_REVISION);
+    readValue = tcan_spi_read_32(handle, REG_SPI_REVISION);
 
     return (uint16_t)(readValue & 0xFFFF);
 }
@@ -1503,10 +1503,10 @@ TCAN4x5x_Device_ReadDeviceVersion(void)
  * @return @c true if configuration successfully done, @c false if not
  */
 bool
-TCAN4x5x_Device_Configure(TCAN4x5x_DEV_CONFIG *devCfg)
+TCAN4x5x_Device_Configure(tcan_handle_t handle, TCAN4x5x_DEV_CONFIG *devCfg)
 {
     // First we must read the register
-    uint32_t readDevice = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    uint32_t readDevice = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
 
     // Then mask the bits that will be set by the struct
     readDevice &= ~(REG_BITS_DEVICE_MODE_SWE_MASK  | REG_BITS_DEVICE_MODE_DEVICE_RESET    | REG_BITS_DEVICE_MODE_WDT_MASK        |
@@ -1531,11 +1531,11 @@ TCAN4x5x_Device_Configure(TCAN4x5x_DEV_CONFIG *devCfg)
     // Set the bits according to the incoming struct
     readDevice |= (REG_BITS_DEVICE_MODE_FORCED_SET_BITS | tempCfg.word);
 
-    AHB_WRITE_32(REG_DEV_MODES_AND_PINS, readDevice);
+    tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, readDevice);
 
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    uint32_t readValue = AHB_READ_32(REG_DEV_MODES_AND_PINS);       // Read value
+    uint32_t readValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);       // Read value
     if (readValue != readDevice)
         return false;
 #endif
@@ -1551,9 +1551,9 @@ TCAN4x5x_Device_Configure(TCAN4x5x_DEV_CONFIG *devCfg)
  * @param *devCfg is a pointer to a @c TCAN4x5x_DEV_CONFIG struct to be updated with the current mode and pin register values
  */
 void
-TCAN4x5x_Device_ReadConfig(TCAN4x5x_DEV_CONFIG *devCfg)
+TCAN4x5x_Device_ReadConfig(tcan_handle_t handle, TCAN4x5x_DEV_CONFIG *devCfg)
 {
-    devCfg->word = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    devCfg->word = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
 }
 
 
@@ -1565,9 +1565,9 @@ TCAN4x5x_Device_ReadConfig(TCAN4x5x_DEV_CONFIG *devCfg)
  * @param *ir is a pointer to a @c TCAN4x5x_Device_Interrupts struct containing the interrupt bit fields that will be updated
  */
 void
-TCAN4x5x_Device_ReadInterrupts(TCAN4x5x_Device_Interrupts *ir)
+TCAN4x5x_Device_ReadInterrupts(tcan_handle_t handle, TCAN4x5x_Device_Interrupts *ir)
 {
-    ir->word = AHB_READ_32(REG_DEV_IR);
+    ir->word = tcan_spi_read_32(handle, REG_DEV_IR);
 }
 
 
@@ -1579,9 +1579,9 @@ TCAN4x5x_Device_ReadInterrupts(TCAN4x5x_Device_Interrupts *ir)
  * @param *ir is a pointer to a @c TCAN4x5x_Device_Interrupts struct containing the interrupt bit fields that will be updated
  */
 void
-TCAN4x5x_Device_ClearInterrupts(TCAN4x5x_Device_Interrupts *ir)
+TCAN4x5x_Device_ClearInterrupts(tcan_handle_t handle, TCAN4x5x_Device_Interrupts *ir)
 {
-    AHB_WRITE_32(REG_DEV_IR, ir->word);
+    tcan_spi_write_32(handle, REG_DEV_IR, ir->word);
 }
 
 
@@ -1591,9 +1591,9 @@ TCAN4x5x_Device_ClearInterrupts(TCAN4x5x_Device_Interrupts *ir)
  * Clears all device interrupts
  */
 void
-TCAN4x5x_Device_ClearInterruptsAll(void)
+TCAN4x5x_Device_ClearInterruptsAll(tcan_handle_t handle)
 {
-    AHB_WRITE_32(REG_DEV_IR, 0xFFFFFFFF);
+    tcan_spi_write_32(handle, REG_DEV_IR, 0xFFFFFFFF);
 }
 
 
@@ -1601,9 +1601,9 @@ TCAN4x5x_Device_ClearInterruptsAll(void)
  * @brief Clears a SPIERR flag that may be set
  */
 void
-TCAN4x5x_Device_ClearSPIERR(void)
+TCAN4x5x_Device_ClearSPIERR(tcan_handle_t handle)
 {
-    AHB_WRITE_32(REG_SPI_STATUS, 0xFFFFFFFF);       // Simply write all 1s to attempt to clear a SPIERR that was set
+    tcan_spi_write_32(handle, REG_SPI_STATUS, 0xFFFFFFFF);       // Simply write all 1s to attempt to clear a SPIERR that was set
 }
 
 
@@ -1615,9 +1615,9 @@ TCAN4x5x_Device_ClearSPIERR(void)
  * @param *ie is a pointer to a @c TCAN4x5x_Device_Interrupt_Enable struct containing the interrupt bit fields that will be updated
  */
 void
-TCAN4x5x_Device_ReadInterruptEnable(TCAN4x5x_Device_Interrupt_Enable *ie)
+TCAN4x5x_Device_ReadInterruptEnable(tcan_handle_t handle, TCAN4x5x_Device_Interrupt_Enable *ie)
 {
-    ie->word = AHB_READ_32(REG_DEV_IE);
+    ie->word = tcan_spi_read_32(handle, REG_DEV_IE);
 }
 
 
@@ -1631,12 +1631,12 @@ TCAN4x5x_Device_ReadInterruptEnable(TCAN4x5x_Device_Interrupt_Enable *ie)
  * @return @c true if configuration successfully done, @c false if not
  */
 bool
-TCAN4x5x_Device_ConfigureInterruptEnable(TCAN4x5x_Device_Interrupt_Enable *ie)
+TCAN4x5x_Device_ConfigureInterruptEnable(tcan_handle_t handle, TCAN4x5x_Device_Interrupt_Enable *ie)
 {
-    AHB_WRITE_32(REG_DEV_IE, ie->word);
+    tcan_spi_write_32(handle, REG_DEV_IE, ie->word);
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    uint32_t readValue = AHB_READ_32(REG_DEV_IE);       // Read value
+    uint32_t readValue = tcan_spi_read_32(handle, REG_DEV_IE);       // Read value
     readValue &= REG_BITS_DEVICE_IE_MASK;               // Apply mask to ignore reserved
     if (readValue != (ie->word & REG_BITS_DEVICE_IE_MASK))
         return false;
@@ -1655,9 +1655,9 @@ TCAN4x5x_Device_ConfigureInterruptEnable(TCAN4x5x_Device_Interrupt_Enable *ie)
  * @return @c true if configuration successfully done, @c false if not
  */
 bool
-TCAN4x5x_Device_SetMode(TCAN4x5x_Device_Mode_Enum modeDefine)
+TCAN4x5x_Device_SetMode(tcan_handle_t handle, TCAN4x5x_Device_Mode_Enum modeDefine)
 {
-    uint32_t writeValue = (AHB_READ_32(REG_DEV_MODES_AND_PINS) & ~REG_BITS_DEVICE_MODE_DEVICEMODE_MASK);
+    uint32_t writeValue = (tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) & ~REG_BITS_DEVICE_MODE_DEVICEMODE_MASK);
 
     switch (modeDefine) {
         case TCAN4x5x_DEVICE_MODE_NORMAL:
@@ -1676,12 +1676,12 @@ TCAN4x5x_Device_SetMode(TCAN4x5x_Device_Mode_Enum modeDefine)
             return false;
     }
 
-    AHB_WRITE_32(REG_DEV_MODES_AND_PINS, writeValue);
+    tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, writeValue);
 
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
     writeValue &= REG_BITS_DEVICE_MODE_DEVICEMODE_MASK; // Mask out the part we care about verifying
-    if ((AHB_READ_32(REG_DEV_MODES_AND_PINS) & REG_BITS_DEVICE_MODE_DEVICEMODE_MASK) != writeValue)
+    if ((tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) & REG_BITS_DEVICE_MODE_DEVICEMODE_MASK) != writeValue)
         return false;
 #endif
     return true;
@@ -1696,9 +1696,9 @@ TCAN4x5x_Device_SetMode(TCAN4x5x_Device_Mode_Enum modeDefine)
  * @return A @c TCAN4x5x_Device_Mode_Enum enum of the current state
  */
 TCAN4x5x_Device_Mode_Enum
-TCAN4x5x_Device_ReadMode(void)
+TCAN4x5x_Device_ReadMode(tcan_handle_t handle)
 {
-    uint32_t readValue = (AHB_READ_32(REG_DEV_MODES_AND_PINS) & REG_BITS_DEVICE_MODE_DEVICEMODE_MASK);
+    uint32_t readValue = (tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) & REG_BITS_DEVICE_MODE_DEVICEMODE_MASK);
 
     switch (readValue) {
         case REG_BITS_DEVICE_MODE_DEVICEMODE_NORMAL:
@@ -1726,16 +1726,16 @@ TCAN4x5x_Device_ReadMode(void)
  * @return @c true if configuration successfully done, @c false if not
  */
 bool
-TCAN4x5x_Device_EnableTestMode(TCAN4x5x_Device_Test_Mode_Enum modeDefine)
+TCAN4x5x_Device_EnableTestMode(tcan_handle_t handle, TCAN4x5x_Device_Test_Mode_Enum modeDefine)
 {
-    uint32_t readWriteValue = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    uint32_t readWriteValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
     readWriteValue &= ~REG_BITS_DEVICE_MODE_TESTMODE_MASK;					// Clear the bits that we are setting
 
     // Set the appropriate bits depending on the passed in value
     switch (modeDefine)
     {
         case TCAN4x5x_DEVICE_TEST_MODE_NORMAL:
-            TCAN4x5x_Device_DisableTestMode();
+            TCAN4x5x_Device_DisableTestMode(handle);
             break;
 
         case TCAN4x5x_DEVICE_TEST_MODE_CONTROLLER:
@@ -1748,11 +1748,11 @@ TCAN4x5x_Device_EnableTestMode(TCAN4x5x_Device_Test_Mode_Enum modeDefine)
 
         default: return false;	    									// If an invalid value was passed, then we will return fail
     }
-    AHB_WRITE_32(REG_DEV_MODES_AND_PINS, readWriteValue);				// Write the updated values
+    tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, readWriteValue);				// Write the updated values
 
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    if (AHB_READ_32(REG_DEV_MODES_AND_PINS) != readWriteValue)
+    if (tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) != readWriteValue)
         return false;
 #endif
     return true;
@@ -1765,15 +1765,15 @@ TCAN4x5x_Device_EnableTestMode(TCAN4x5x_Device_Test_Mode_Enum modeDefine)
  * @return @c true if disabling test mode was successful, @c false if not
  */
 bool
-TCAN4x5x_Device_DisableTestMode(void)
+TCAN4x5x_Device_DisableTestMode(tcan_handle_t handle)
 {
-    uint32_t readWriteValue = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    uint32_t readWriteValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
     readWriteValue &= ~(REG_BITS_DEVICE_MODE_TESTMODE_MASK | REG_BITS_DEVICE_MODE_TESTMODE_ENMASK);	// Clear the bits
-    AHB_WRITE_32(REG_DEV_MODES_AND_PINS, readWriteValue);				// Write the updated values
+    tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, readWriteValue);				// Write the updated values
 
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    if (AHB_READ_32(REG_DEV_MODES_AND_PINS) != readWriteValue)
+    if (tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) != readWriteValue)
         return false;
 #endif
     return true;
@@ -1786,9 +1786,9 @@ TCAN4x5x_Device_DisableTestMode(void)
  * @return an @c TCAN4x5x_Device_Test_Mode_Enum of the current device test mode
  */
 TCAN4x5x_Device_Test_Mode_Enum
-TCAN4x5x_Device_ReadTestMode(void)
+TCAN4x5x_Device_ReadTestMode(tcan_handle_t handle)
 {
-    uint32_t readValue = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    uint32_t readValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
 
     // If Test mode is enabled...
     if (readValue & REG_BITS_DEVICE_MODE_TESTMODE_ENMASK)
@@ -1812,9 +1812,9 @@ TCAN4x5x_Device_ReadTestMode(void)
  * @return @c true if successfully configured, or @c false otherwise
  */
 bool
-TCAN4x5x_WDT_Configure(TCAN4x5x_WDT_Timer_Enum WDTtimeout)
+TCAN4x5x_WDT_Configure(tcan_handle_t handle, TCAN4x5x_WDT_Timer_Enum WDTtimeout)
 {
-    uint32_t readWriteValue = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    uint32_t readWriteValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
     readWriteValue &= ~REG_BITS_DEVICE_MODE_WD_TIMER_MASK;					// Clear the bits that we are setting
 
     // Set the appropriate bits depending on the passed in value
@@ -1838,11 +1838,11 @@ TCAN4x5x_WDT_Configure(TCAN4x5x_WDT_Timer_Enum WDTtimeout)
 
         default: return false;									// If an invalid value was passed, then we will return fail
     }
-    AHB_WRITE_32(REG_DEV_MODES_AND_PINS, readWriteValue);				// Write the updated values
+    tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, readWriteValue);				// Write the updated values
 
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    if (AHB_READ_32(REG_DEV_MODES_AND_PINS) != readWriteValue)
+    if (tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) != readWriteValue)
         return false;
 #endif
     return true;
@@ -1855,9 +1855,9 @@ TCAN4x5x_WDT_Configure(TCAN4x5x_WDT_Timer_Enum WDTtimeout)
  * @return an @c TCAN4x5x_WDT_Timer_Enum enum of the currently configured time window
  */
 TCAN4x5x_WDT_Timer_Enum
-TCAN4x5x_WDT_Read(void)
+TCAN4x5x_WDT_Read(tcan_handle_t handle)
 {
-    uint32_t readValue = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    uint32_t readValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
     readValue &= REG_BITS_DEVICE_MODE_WD_TIMER_MASK;
 
     switch (readValue)
@@ -1885,14 +1885,14 @@ TCAN4x5x_WDT_Read(void)
  * @return @c true if successfully enabled, or @c false otherwise
  */
 bool
-TCAN4x5x_WDT_Enable(void)
+TCAN4x5x_WDT_Enable(tcan_handle_t handle)
 {
-    uint32_t readWriteValue = AHB_READ_32(REG_DEV_MODES_AND_PINS) | REG_BITS_DEVICE_MODE_WDT_EN;
-    AHB_WRITE_32(REG_DEV_MODES_AND_PINS, readWriteValue);		// Enable the watch dog timer
+    uint32_t readWriteValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) | REG_BITS_DEVICE_MODE_WDT_EN;
+    tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, readWriteValue);		// Enable the watch dog timer
 
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    if (AHB_READ_32(REG_DEV_MODES_AND_PINS) != readWriteValue)
+    if (tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) != readWriteValue)
         return false;
 #endif
 
@@ -1906,15 +1906,15 @@ TCAN4x5x_WDT_Enable(void)
  * @return @c true if successfully disabled, or @c false otherwise
  */
 bool
-TCAN4x5x_WDT_Disable(void)
+TCAN4x5x_WDT_Disable(tcan_handle_t handle)
 {
-    uint32_t writeValue = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    uint32_t writeValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
     writeValue &= ~REG_BITS_DEVICE_MODE_WDT_EN;					// Clear the EN bit
-    AHB_WRITE_32(REG_DEV_MODES_AND_PINS, writeValue);			// Disable the watch dog timer
+    tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, writeValue);			// Disable the watch dog timer
 
 #ifdef TCAN4x5x_DEVICE_VERIFY_CONFIGURATION_WRITES
     // Check to see if the write was successful.
-    if (AHB_READ_32(REG_DEV_MODES_AND_PINS) != writeValue)
+    if (tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS) != writeValue)
         return false;
 #endif
         return true;
@@ -1925,9 +1925,9 @@ TCAN4x5x_WDT_Disable(void)
  * @brief Reset the watchdog timer
  */
 void
-TCAN4x5x_WDT_Reset(void)
+TCAN4x5x_WDT_Reset(tcan_handle_t handle)
 {
-    uint32_t writeValue = AHB_READ_32(REG_DEV_MODES_AND_PINS);
+    uint32_t writeValue = tcan_spi_read_32(handle, REG_DEV_MODES_AND_PINS);
     writeValue |= REG_BITS_DEVICE_MODE_WDT_RESET_BIT;
-    AHB_WRITE_32(REG_DEV_MODES_AND_PINS, writeValue);		// Reset the watch dog timer
+    tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, writeValue);		// Reset the watch dog timer
 }

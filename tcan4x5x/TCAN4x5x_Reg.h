@@ -51,6 +51,10 @@
 #ifndef TCAN4X5X_REG_H_
 #define TCAN4X5X_REG_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MRAM_SIZE									2048
 
 //*****************************************************************************
@@ -652,5 +656,9 @@
 #define REG_BITS_DEVICE_IE_CANDOM					0x00000100
 // Reserved											0x80-00
 #define REG_BITS_DEVICE_IE_MASK                     0xFF69D700
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* TCAN4X5X_REG_H_ */

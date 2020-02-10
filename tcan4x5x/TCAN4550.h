@@ -38,9 +38,16 @@
 
 #ifndef TCAN4550_H_
 #define TCAN4550_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "TCAN4x5x_SPI.h"
 #include "TCAN4x5x_Reg.h"
 #include "TCAN4x5x_Data_Structs.h"
+
+#include <stdbool.h>
 
 //! If TCAN4x5x_MCAN_CACHE_CONFIGURATION is defined, then the read and write to MRAM functions will cache certain values to reduce the number of SPI reads necessary to send or receive a packet
 #define TCAN4x5x_MCAN_CACHE_CONFIGURATION
@@ -70,40 +77,38 @@ typedef enum { TCAN4x5x_WDT_60MS, TCAN4x5x_WDT_600MS, TCAN4x5x_WDT_3S, TCAN4x5x_
 typedef enum { TCAN4x5x_DEVICE_TEST_MODE_NORMAL, TCAN4x5x_DEVICE_TEST_MODE_PHY, TCAN4x5x_DEVICE_TEST_MODE_CONTROLLER } TCAN4x5x_Device_Test_Mode_Enum;
 typedef enum { TCAN4x5x_DEVICE_MODE_NORMAL, TCAN4x5x_DEVICE_MODE_STANDBY, TCAN4x5x_DEVICE_MODE_SLEEP } TCAN4x5x_Device_Mode_Enum;
 
-
-
 // ~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*
 //                            MCAN Device Functions
 // ~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*
-extern bool TCAN4x5x_MCAN_EnableProtectedRegisters(void);
-extern bool TCAN4x5x_MCAN_DisableProtectedRegisters(void);
-extern bool TCAN4x5x_MCAN_ConfigureCCCRRegister(TCAN4x5x_MCAN_CCCR_Config *cccr);
-extern void TCAN4x5x_MCAN_ReadCCCRRegister(TCAN4x5x_MCAN_CCCR_Config *cccrConfig);
-extern void TCAN4x5x_MCAN_ReadDataTimingFD_Simple(TCAN4x5x_MCAN_Data_Timing_Simple *dataTiming);
-extern void TCAN4x5x_MCAN_ReadDataTimingFD_Raw(TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming);
-extern bool TCAN4x5x_MCAN_ConfigureDataTiming_Simple(TCAN4x5x_MCAN_Data_Timing_Simple *dataTiming);
-extern bool TCAN4x5x_MCAN_ConfigureDataTiming_Raw(TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming);
-extern void TCAN4x5x_MCAN_ReadNominalTiming_Simple(TCAN4x5x_MCAN_Nominal_Timing_Simple *nomTiming);
-extern void TCAN4x5x_MCAN_ReadNominalTiming_Raw(TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming);
-extern bool TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(TCAN4x5x_MCAN_Nominal_Timing_Simple *nomTiming);
-extern bool TCAN4x5x_MCAN_ConfigureNominalTiming_Raw(TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming);
-extern bool TCAN4x5x_MCAN_ConfigureGlobalFilter(TCAN4x5x_MCAN_Global_Filter_Configuration *gfc);
+extern bool TCAN4x5x_MCAN_EnableProtectedRegisters(tcan_handle_t handle);
+extern bool TCAN4x5x_MCAN_DisableProtectedRegisters(tcan_handle_t handle);
+extern bool TCAN4x5x_MCAN_ConfigureCCCRRegister(tcan_handle_t handle, TCAN4x5x_MCAN_CCCR_Config *cccr);
+extern void TCAN4x5x_MCAN_ReadCCCRRegister(tcan_handle_t handle, TCAN4x5x_MCAN_CCCR_Config *cccrConfig);
+extern void TCAN4x5x_MCAN_ReadDataTimingFD_Simple(tcan_handle_t handle, TCAN4x5x_MCAN_Data_Timing_Simple *dataTiming);
+extern void TCAN4x5x_MCAN_ReadDataTimingFD_Raw(tcan_handle_t handle, TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming);
+extern bool TCAN4x5x_MCAN_ConfigureDataTiming_Simple(tcan_handle_t handle, TCAN4x5x_MCAN_Data_Timing_Simple *dataTiming);
+extern bool TCAN4x5x_MCAN_ConfigureDataTiming_Raw(tcan_handle_t handle, TCAN4x5x_MCAN_Data_Timing_Raw *dataTiming);
+extern void TCAN4x5x_MCAN_ReadNominalTiming_Simple(tcan_handle_t handle, TCAN4x5x_MCAN_Nominal_Timing_Simple *nomTiming);
+extern void TCAN4x5x_MCAN_ReadNominalTiming_Raw(tcan_handle_t handle, TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming);
+extern bool TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(tcan_handle_t handle, TCAN4x5x_MCAN_Nominal_Timing_Simple *nomTiming);
+extern bool TCAN4x5x_MCAN_ConfigureNominalTiming_Raw(tcan_handle_t handle, TCAN4x5x_MCAN_Nominal_Timing_Raw *nomTiming);
+extern bool TCAN4x5x_MCAN_ConfigureGlobalFilter(tcan_handle_t handle, TCAN4x5x_MCAN_Global_Filter_Configuration *gfc);
 
 
-extern bool TCAN4x5x_MRAM_Configure(TCAN4x5x_MRAM_Config *MRAMConfig);
-extern void TCAN4x5x_MRAM_Clear(void);
-extern void TCAN4x5x_MCAN_ReadInterrupts(TCAN4x5x_MCAN_Interrupts *ir);
-extern void TCAN4x5x_MCAN_ClearInterrupts(TCAN4x5x_MCAN_Interrupts *ir);
-extern void TCAN4x5x_MCAN_ClearInterruptsAll(void);
-extern void TCAN4x5x_MCAN_ReadInterruptEnable(TCAN4x5x_MCAN_Interrupt_Enable *ie);
-extern void TCAN4x5x_MCAN_ConfigureInterruptEnable(TCAN4x5x_MCAN_Interrupt_Enable *ie);
-extern uint8_t TCAN4x5x_MCAN_ReadNextFIFO(TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_Header *header, uint8_t dataPayload[]);
-extern uint8_t TCAN4x5x_MCAN_ReadRXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, uint8_t dataPayload[]);
-extern uint32_t TCAN4x5x_MCAN_WriteTXBuffer(uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, uint8_t dataPayload[]);
-extern bool TCAN4x5x_MCAN_TransmitBufferContents(uint8_t bufIndex);
-extern bool TCAN4x5x_MCAN_WriteSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filter);
-extern bool TCAN4x5x_MCAN_ReadSIDFilter(uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filter);
-extern bool TCAN4x5x_MCAN_WriteXIDFilter(uint8_t fifoIndex, TCAN4x5x_MCAN_XID_Filter *filter);
+extern bool TCAN4x5x_MRAM_Configure(tcan_handle_t handle, TCAN4x5x_MRAM_Config *MRAMConfig);
+extern void TCAN4x5x_MRAM_Clear(tcan_handle_t handle);
+extern void TCAN4x5x_MCAN_ReadInterrupts(tcan_handle_t handle, TCAN4x5x_MCAN_Interrupts *ir);
+extern void TCAN4x5x_MCAN_ClearInterrupts(tcan_handle_t handle, TCAN4x5x_MCAN_Interrupts *ir);
+extern void TCAN4x5x_MCAN_ClearInterruptsAll(tcan_handle_t handle);
+extern void TCAN4x5x_MCAN_ReadInterruptEnable(tcan_handle_t handle, TCAN4x5x_MCAN_Interrupt_Enable *ie);
+extern void TCAN4x5x_MCAN_ConfigureInterruptEnable(tcan_handle_t handle, TCAN4x5x_MCAN_Interrupt_Enable *ie);
+extern uint8_t TCAN4x5x_MCAN_ReadNextFIFO(tcan_handle_t handle, TCAN4x5x_MCAN_FIFO_Enum FIFODefine, TCAN4x5x_MCAN_RX_Header *header, uint8_t dataPayload[]);
+extern uint8_t TCAN4x5x_MCAN_ReadRXBuffer(tcan_handle_t handle, uint8_t bufIndex, TCAN4x5x_MCAN_RX_Header *header, uint8_t dataPayload[]);
+extern uint32_t TCAN4x5x_MCAN_WriteTXBuffer(tcan_handle_t handle, uint8_t bufIndex, TCAN4x5x_MCAN_TX_Header *header, uint8_t dataPayload[]);
+extern bool TCAN4x5x_MCAN_TransmitBufferContents(tcan_handle_t handle, uint8_t bufIndex);
+extern bool TCAN4x5x_MCAN_WriteSIDFilter(tcan_handle_t handle, uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filter);
+extern bool TCAN4x5x_MCAN_ReadSIDFilter(tcan_handle_t handle, uint8_t filterIndex, TCAN4x5x_MCAN_SID_Filter *filter);
+extern bool TCAN4x5x_MCAN_WriteXIDFilter(tcan_handle_t handle, uint8_t fifoIndex, TCAN4x5x_MCAN_XID_Filter *filter);
 extern uint8_t TCAN4x5x_MCAN_DLCtoBytes(uint8_t inputDLC);
 extern uint8_t TCAN4x5x_MCAN_TXRXESC_DataByteValue(uint8_t inputESCValue);
 
@@ -113,27 +118,30 @@ extern uint8_t TCAN4x5x_MCAN_TXRXESC_DataByteValue(uint8_t inputESCValue);
 // ~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*
 //                            Non-MCAN Device Functions
 // ~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*~*
-extern uint16_t TCAN4x5x_Device_ReadDeviceVersion(void);
-extern bool TCAN4x5x_Device_Configure(TCAN4x5x_DEV_CONFIG *devCfg);
-extern void TCAN4x5x_Device_ReadConfig(TCAN4x5x_DEV_CONFIG *devCfg);
-extern void TCAN4x5x_Device_ReadInterrupts(TCAN4x5x_Device_Interrupts *ir);
-extern void TCAN4x5x_Device_ClearInterrupts(TCAN4x5x_Device_Interrupts *ir);
-extern void TCAN4x5x_Device_ClearInterruptsAll(void);
-extern void TCAN4x5x_Device_ClearSPIERR(void);
-extern void TCAN4x5x_Device_ReadInterruptEnable(TCAN4x5x_Device_Interrupt_Enable *ie);
-extern bool TCAN4x5x_Device_ConfigureInterruptEnable(TCAN4x5x_Device_Interrupt_Enable *ie);
-extern bool TCAN4x5x_Device_SetMode(TCAN4x5x_Device_Mode_Enum modeDefine);
-extern TCAN4x5x_Device_Mode_Enum TCAN4x5x_Device_ReadMode(void);
-extern bool TCAN4x5x_Device_EnableTestMode(TCAN4x5x_Device_Test_Mode_Enum modeDefine);
-extern bool TCAN4x5x_Device_DisableTestMode(void);
-extern TCAN4x5x_Device_Test_Mode_Enum TCAN4x5x_Device_ReadTestMode(void);
+extern uint16_t TCAN4x5x_Device_ReadDeviceVersion(tcan_handle_t handle);
+extern bool TCAN4x5x_Device_Configure(tcan_handle_t handle, TCAN4x5x_DEV_CONFIG *devCfg);
+extern void TCAN4x5x_Device_ReadConfig(tcan_handle_t handle, TCAN4x5x_DEV_CONFIG *devCfg);
+extern void TCAN4x5x_Device_ReadInterrupts(tcan_handle_t handle, TCAN4x5x_Device_Interrupts *ir);
+extern void TCAN4x5x_Device_ClearInterrupts(tcan_handle_t handle, TCAN4x5x_Device_Interrupts *ir);
+extern void TCAN4x5x_Device_ClearInterruptsAll(tcan_handle_t handle);
+extern void TCAN4x5x_Device_ClearSPIERR(tcan_handle_t handle);
+extern void TCAN4x5x_Device_ReadInterruptEnable(tcan_handle_t handle, TCAN4x5x_Device_Interrupt_Enable *ie);
+extern bool TCAN4x5x_Device_ConfigureInterruptEnable(tcan_handle_t handle, TCAN4x5x_Device_Interrupt_Enable *ie);
+extern bool TCAN4x5x_Device_SetMode(tcan_handle_t handle, TCAN4x5x_Device_Mode_Enum modeDefine);
+extern TCAN4x5x_Device_Mode_Enum TCAN4x5x_Device_ReadMode(tcan_handle_t handle);
+extern bool TCAN4x5x_Device_EnableTestMode(tcan_handle_t handle, TCAN4x5x_Device_Test_Mode_Enum modeDefine);
+extern bool TCAN4x5x_Device_DisableTestMode(tcan_handle_t handle);
+extern TCAN4x5x_Device_Test_Mode_Enum TCAN4x5x_Device_ReadTestMode(tcan_handle_t handle);
 
 
-extern bool TCAN4x5x_WDT_Configure(TCAN4x5x_WDT_Timer_Enum WDTtimeout);
-extern TCAN4x5x_WDT_Timer_Enum TCAN4x5x_WDT_Read(void);
-extern bool TCAN4x5x_WDT_Enable(void);
-extern bool TCAN4x5x_WDT_Disable(void);
-extern void TCAN4x5x_WDT_Reset(void);
+extern bool TCAN4x5x_WDT_Configure(tcan_handle_t handle, TCAN4x5x_WDT_Timer_Enum WDTtimeout);
+extern TCAN4x5x_WDT_Timer_Enum TCAN4x5x_WDT_Read(tcan_handle_t handle);
+extern bool TCAN4x5x_WDT_Enable(tcan_handle_t handle);
+extern bool TCAN4x5x_WDT_Disable(tcan_handle_t handle);
+extern void TCAN4x5x_WDT_Reset(tcan_handle_t handle);
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
