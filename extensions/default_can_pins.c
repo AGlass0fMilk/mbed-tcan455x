@@ -27,7 +27,7 @@
  * They must define default pins for mosi, miso, sclk, and nint if they are
  * using the default TCAN instance
  */
-#if !MBED_CONF_TCAN4551_MULTIPLE_TCAN_ENABLE
+#if MBED_CONF_TCAN4551_NUMBER_OF_TCANS == 1
 
 #include "can_helper.h"
 
@@ -54,7 +54,7 @@ MBED_STATIC_ASSERT(MBED_CONF_TCAN4551_DEFAULT_TCAN_NINT != NC,
  *
  * The last line should always end with a PinMap that is all "NC"
  */
-const PinMapTCAN4551 PinMap_TCAN4551[] = {
+const PinMapTCAN4551 PinMap_TCAN4551[MBED_CONF_TCAN4551_NUMBER_OF_TCANS+1] = {
         { .rd   = MBED_CONF_TCAN4551_DEFAULT_TCAN_MISO,
           .td   = MBED_CONF_TCAN4551_DEFAULT_TCAN_MOSI,
           .mosi = MBED_CONF_TCAN4551_DEFAULT_TCAN_MOSI,

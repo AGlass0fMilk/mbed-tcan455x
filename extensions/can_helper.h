@@ -23,6 +23,8 @@
 #ifndef CAN_HELPER_H_
 #define CAN_HELPER_H_
 
+#include "PinNames.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -61,8 +63,7 @@ typedef struct {
  *
  * See default_can_pins.c for more information
  */
-extern const PinMapTCAN4551 PinMap_TCAN4551[];
-
+extern const PinMapTCAN4551 PinMap_TCAN4551[MBED_CONF_TCAN4551_NUMBER_OF_TCANS+1];
 
 /**
  * Map CAN instance rd and td pins to TCAN instance and pins for SPI

@@ -28,6 +28,10 @@
 #include "PeripheralNames.h"
 #include "PinNames.h"
 
+#if defined(DEVICE_CAN)
+#include "can_api.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -35,7 +39,7 @@ extern "C" {
 #if MBED_CONF_HAL_ENABLE_OBJECTS_EXTENSIONS && defined(DEVICE_CAN)
 
 struct can_s {
-    int placeholder;
+    void* instance_ptr;     /** Pointer to TCAN4551 object */
 };
 
 #endif /** MBED_CONF_HAL_ENABLE_OBJECTS_EXTENSIONS */
