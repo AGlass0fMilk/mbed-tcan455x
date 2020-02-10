@@ -829,7 +829,7 @@ TCAN4x5x_MCAN_ReadNextFIFO(tcan_handle_t handle, TCAN4x5x_MCAN_FIFO_Enum FIFODef
 {
     uint32_t readData;
     uint16_t startAddress;
-    uint8_t i, getIndex, elementSize;
+    uint8_t i = 0, getIndex, elementSize;
 
     // Get the get buffer location and size, depending on the source type
     switch (FIFODefine)
@@ -965,7 +965,7 @@ TCAN4x5x_MCAN_ReadRXBuffer(tcan_handle_t handle, uint8_t bufIndex, TCAN4x5x_MCAN
 {
     uint32_t readData;
     uint16_t startAddress;
-    uint8_t i, getIndex, elementSize;
+    uint8_t i = 0, getIndex, elementSize;
 
     // Get the get buffer location and size
     getIndex = bufIndex;

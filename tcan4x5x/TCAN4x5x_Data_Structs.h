@@ -1136,7 +1136,7 @@ typedef struct
     };
 } TCAN4x5x_DEV_CONFIG;
 
-#ifdef _cplusplus
+#ifdef __cplusplus
 }
 #endif
 

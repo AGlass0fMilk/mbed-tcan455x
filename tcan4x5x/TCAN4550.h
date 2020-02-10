@@ -39,15 +39,15 @@
 #ifndef TCAN4550_H_
 #define TCAN4550_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
 #include "TCAN4x5x_SPI.h"
 #include "TCAN4x5x_Reg.h"
 #include "TCAN4x5x_Data_Structs.h"
 
 #include <stdbool.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 //! If TCAN4x5x_MCAN_CACHE_CONFIGURATION is defined, then the read and write to MRAM functions will cache certain values to reduce the number of SPI reads necessary to send or receive a packet
 #define TCAN4x5x_MCAN_CACHE_CONFIGURATION

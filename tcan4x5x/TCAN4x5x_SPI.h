@@ -15,12 +15,12 @@
 #ifndef TCAN4X5X_SPI_H_
 #define TCAN4X5X_SPI_H_
 
+#include <stdint.h>
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-
-#include <stdint.h>
-#include <stdbool.h>
 
 // Used by C driver to distinguish between multiple TCAN instances
 typedef void* tcan_handle_t;

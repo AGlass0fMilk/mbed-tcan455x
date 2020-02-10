@@ -22,14 +22,14 @@ public:
 
     TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin);
 
-    ~TCAN4551();
+    virtual ~TCAN4551();
 
     /**
      * Gets the TCAN4551 driver associated with the given CAN object
      * @param[in] can_handle Handle of Mbed CAN object
      * @retval tcan Corresponding TCAN driver object
      */
-    static TCAN4551& get_tcan_handle(mbed::CAN& can_handle);
+//    static TCAN4551& get_tcan_handle(mbed::CAN& can_handle);
 
     virtual void init(void);
 

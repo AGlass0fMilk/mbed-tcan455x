@@ -12,15 +12,11 @@
 #include "platform/Callback.h"
 
 TCAN4551::TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn,
-        PinName nint_pin) : spi(mosi, miso, sclk, csn), nint(nint_pin, PullUp),
+        PinName nint_pin) : spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), nint(nint_pin, PullUp),
         irq_handler(NULL), id(0), irq_mask(0), read_errors(0), write_errors(0) {
 }
 
 TCAN4551::~TCAN4551() {
-}
-
-TCAN4551& TCAN4551::get_tcan_handle(mbed::CAN& can_handle) {
-    // TODO - remove this?
 }
 
 void TCAN4551::init(void) {
@@ -205,3 +201,5 @@ void TCAN4551::_tcan_irq_handler(void) {
 //        this->irq_handler(this->id); // TODO - add interrupt type info
     }
 }
+
+
