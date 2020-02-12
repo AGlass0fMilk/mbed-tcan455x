@@ -59,11 +59,17 @@ extern "C" {
      * @param[in] words Number of 32-bit words to write. 0 = 256 words
      */
     void tcan_spi_write_burst_start(tcan_handle_t handle, uint16_t address, uint8_t words) {
+
+        uint32_t header = 0;
+        header |= (words << 24);
+        header |= ((address & 0xFF) << 16);
+        header |= (address & 0xFF00);
+        header |= AHB_WRITE_OPCODE;
+
         mbed::SPI& spi = ((TCAN4551*)handle)->get_spi_handle();
         spi.select();
 
-        spi.write((const char*) &address, 2, NULL, 0);
-        spi.write((const char*) &words, 1, NULL, 0);
+        spi.write((const char*) &header, 4, NULL, 0);
     }
 
     /*
@@ -78,8 +84,13 @@ extern "C" {
     tcan_spi_write_burst_write(tcan_handle_t handle, uint32_t data)
     {
         // TODO note that 0 = 256 words
+        uint8_t buffer[4] = {0};
         mbed::SPI& spi = ((TCAN4551*)handle)->get_spi_handle();
-        spi.write((const char*) &data, 4, NULL, 0);
+        buffer[0] = ((data & 0xFF000000) >> 24);
+        buffer[1] = ((data & 0x00FF0000) >> 16);
+        buffer[2] |= ((data & 0x0000FF00) >> 8);
+        buffer[3] |= ((data & 0x000000FF));
+        spi.write((const char*) buffer, 4, NULL, 0);
     }
 
     /**
@@ -102,11 +113,16 @@ extern "C" {
      * @param[in] words Number of words to read
      */
     void tcan_spi_read_burst_start(tcan_handle_t handle, uint16_t address, uint8_t words) {
+        uint32_t header = 0;
+        header |= (words << 24);
+        header |= ((address & 0xFF) << 16);
+        header |= (address & 0xFF00);
+        header |= AHB_READ_OPCODE;
+
         mbed::SPI& spi = ((TCAN4551*)handle)->get_spi_handle();
         spi.select();
 
-        spi.write((const char*) &address, 2, NULL, 0);
-        spi.write((const char*) &words, 1, NULL, 0);
+        spi.write((const char*) &header, 4, NULL, 0);
     }
 
     /*
@@ -120,10 +136,16 @@ extern "C" {
     tcan_spi_read_burst_read(tcan_handle_t handle)
     {
         // todo note that 0 = 256 words
+        uint8_t buffer[4] = {0};
         uint32_t returnValue = 0;
 
         mbed::SPI& spi = ((TCAN4551*)handle)->get_spi_handle();
-        spi.write(NULL, 0, (char*) &returnValue, 4);
+        spi.write(NULL, 0, (char*) buffer, 4);
+
+        returnValue = (((uint32_t)buffer[0]) << 24)
+                | (((uint32_t)buffer[1] << 16))
+                | (((uint32_t)buffer[2]) << 8)
+                | buffer[3];
 
         return returnValue;
     }

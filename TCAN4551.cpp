@@ -20,6 +20,11 @@ TCAN4551::~TCAN4551() {
 }
 
 void TCAN4551::init(void) {
+
+#ifndef NDEBUG
+    TCAN4x5x_Device_ReadDeviceVersion(this);
+#endif
+
     TCAN4x5x_Device_ClearSPIERR(this);                              // Clear any SPI ERR flags that might be set as a result of our pin mux changing during MCU startup
 
     /* Step one attempt to clear all interrupts */
@@ -171,11 +176,52 @@ void TCAN4551::disable_irq(CanIrqType type) {
 }
 
 int TCAN4551::write(CAN_Message msg, int cc) {
-    return 0; // TODO
+    TCAN4x5x_MCAN_TX_Header header = {0};
+    header.DLC  = (msg.len & 0xF);
+    header.ID   = msg.id;
+    header.FDF  = 0;
+    header.BRS  = 0;
+    header.EFC  = 0;
+    header.MM   = 0;
+    header.RTR  = 0;
+    header.XTD  = 0;
+    header.ESI  = 0;
+
+    TCAN4x5x_MCAN_WriteTXBuffer(this, 0, &header, msg.data);
+    TCAN4x5x_MCAN_TransmitBufferContents(this, 0);
+
+    return 1; // TODO - how to check if it actually succeeded? wait for interrupt?
 }
 
 int TCAN4551::read(CAN_Message* msg, int handle) {
-    return 0; // TODO
+    TCAN4x5x_MCAN_Interrupts mcan_ir = {0};
+    TCAN4x5x_MCAN_ReadInterrupts(this, &mcan_ir);
+
+    // Clear SPIERR flag if it's set
+    TCAN4x5x_Device_Interrupts dev_ir = {0};
+    TCAN4x5x_Device_ReadInterrupts(this, &dev_ir);
+    if(dev_ir.SPIERR) {
+        TCAN4x5x_Device_ClearSPIERR(this);
+    }
+
+    if(mcan_ir.RF0N) {
+        TCAN4x5x_MCAN_RX_Header msg_header = {0};
+        uint8_t num_bytes = 0;
+
+        TCAN4x5x_MCAN_ClearInterrupts(this, &mcan_ir);
+
+        num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO0, &msg_header, msg->data);
+
+        if(handle != 0 && handle != msg_header.ID) {
+            return 0; // Received message was filtered out
+        } else {
+            return 1;
+        }
+
+    } else {
+        return 0; // No message arrived
+    }
+
 }
 
 int TCAN4551::mode(CanMode mode) {

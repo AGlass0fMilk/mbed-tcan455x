@@ -655,7 +655,7 @@ extern "C" {
 //Reserved											0x00000200
 #define REG_BITS_DEVICE_IE_CANDOM					0x00000100
 // Reserved											0x80-00
-#define REG_BITS_DEVICE_IE_MASK                     0xFF69D700
+#define REG_BITS_DEVICE_IE_MASK                     0x0069D700
 
 #ifdef __cplusplus
 }
