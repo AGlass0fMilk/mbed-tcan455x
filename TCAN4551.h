@@ -12,6 +12,8 @@
 #include "drivers/SPI.h"
 #include "drivers/InterruptIn.h"
 
+#include "TCAN4x5x_Data_Structs.h"
+
 /**
  * TCAN4551 driver
  */
@@ -175,6 +177,8 @@ protected:
 
     unsigned char read_errors;      /** Number of read errors */
     unsigned char write_errors;     /** Number of write errors */
+
+    TCAN4x5x_MCAN_CCCR_Config cccr_config /** TCAN configuration */
 
 };
 

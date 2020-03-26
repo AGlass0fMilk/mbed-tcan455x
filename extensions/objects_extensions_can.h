@@ -36,13 +36,13 @@
 extern "C" {
 #endif
 
-#if MBED_CONF_HAL_ENABLE_OBJECTS_EXTENSIONS && DEVICE_CAN
+#if MBED_CONF_TARGET_ENABLE_OBJECTS_EXTENSIONS && DEVICE_CAN
 
 struct can_s {
     void* instance_ptr;     /** Pointer to TCAN4551 object */
 };
 
-#endif /** MBED_CONF_HAL_ENABLE_OBJECTS_EXTENSIONS */
+#endif /** MBED_CONF_TARGET_ENABLE_OBJECTS_EXTENSIONS */
 
 #ifdef __cplusplus
 }

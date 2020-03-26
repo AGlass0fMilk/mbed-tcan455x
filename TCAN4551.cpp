@@ -9,7 +9,45 @@
 
 #include "TCAN4550.h" /** TI driver header file */
 
+#include "platform/mbed_assert.h"
 #include "platform/Callback.h"
+
+static TCAN4x5x_MCAN_SID_Filter standard_ids[MBED_CONF_TCAN4551_SID_FILTER_COUNT] = {0};
+static int standard_id_index = 0;
+
+static TCAN4x5x_MCAN_XID_Filter extended_ids[MBED_CONF_TCAN4551_XID_FILTER_COUNT] = {0};
+static int extended_id_index = 0;
+
+inline int filter_handle_to_index(int handle) {
+    return handle-1;
+}
+
+inline int filter_index_to_handle(int index) {
+    return index+1;
+}
+
+/*
+ *  Internal function to allocate a standard ID filter handle
+ *  @retval Index of allocated handle in static array, -1 if out of memory
+ */
+int alloc_sid_handle(void) {
+    if(standard_id_index < MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
+        return standard_id_index++;
+    } else {
+        return -1;
+    }
+}
+
+/*
+ *  Internal function to allocate an extended ID filter handle
+ *  @retval Index of allocated handle in static array, -1 if out of memory
+ */int alloc_xid_handle(void) {
+    if(extended_id_index < MBED_CONF_TCAN4551_XID_FILTER_COUNT) {
+        return extended_id_index++;
+    } else {
+        return -1;
+    }
+}
 
 TCAN4551::TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn,
         PinName nint_pin) : spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), nint(nint_pin, PullUp),
@@ -50,9 +88,9 @@ void TCAN4551::init(void) {
     TCANDataTiming.DataTqAfterSamplePoint = 5;
 
     /* Configure the MCAN core settings */
-    TCAN4x5x_MCAN_CCCR_Config cccrConfig = {0};                     // Remember to initialize to 0, or you'll get random garbage!
-    cccrConfig.FDOE = 0;                                            // CAN FD mode disable
-    cccrConfig.BRSE = 0;                                            // CAN FD Bit rate switch disable
+    cccr_config = {0};                     // Remember to initialize to 0, or you'll get random garbage!
+    cccr_config.FDOE = 0;                                            // CAN FD mode disable
+    cccr_config.BRSE = 0;                                            // CAN FD Bit rate switch disable
 
     /* Configure the default CAN packet filtering settings */
     TCAN4x5x_MCAN_Global_Filter_Configuration gfc = {0};
@@ -63,8 +101,8 @@ void TCAN4551::init(void) {
 
     /* ************************************************************************
      * In the next configuration block, we will set the MCAN core up to have:
-     *   - 1 SID filter element
-     *   - 1 XID Filter element
+     *   - 3 SID filter elements
+     *   - 3 XID Filter elements
      *   - 5 RX FIFO 0 elements
      *   - RX FIFO 0 supports data payloads up to 64 bytes
      *   - RX FIFO 1 and RX Buffer will not have any elements, but we still set their data payload sizes, even though it's not required
@@ -72,8 +110,8 @@ void TCAN4551::init(void) {
      *   - 2 Transmit buffers supporting up to 64 bytes of data payload
      */
     TCAN4x5x_MRAM_Config MRAMConfiguration = {0};
-    MRAMConfiguration.SIDNumElements = 1;                       // Standard ID number of elements, you MUST have a filter written to MRAM for each element defined
-    MRAMConfiguration.XIDNumElements = 1;                       // Extended ID number of elements, you MUST have a filter written to MRAM for each element defined
+    MRAMConfiguration.SIDNumElements = MBED_CONF_TCAN4551_SID_FILTER_COUNT; // Standard ID number of elements, you MUST have a filter written to MRAM for each element defined
+    MRAMConfiguration.XIDNumElements = MBED_CONF_TCAN4551_XID_FILTER_COUNT; // Extended ID number of elements, you MUST have a filter written to MRAM for each element defined
     MRAMConfiguration.Rx0NumElements = 5;                       // RX0 Number of elements
     MRAMConfiguration.Rx0ElementSize = MRAM_64_Byte_Data;       // RX0 data payload size
     MRAMConfiguration.Rx1NumElements = 0;                       // RX1 number of elements
@@ -89,7 +127,7 @@ void TCAN4551::init(void) {
      * so it makes the most sense to do them all at once, so we only unlock and lock once                             */
 
     TCAN4x5x_MCAN_EnableProtectedRegisters(this);                       // Start by making protected registers accessible
-    TCAN4x5x_MCAN_ConfigureCCCRRegister(this, &cccrConfig);             // Enable FD mode and Bit rate switching
+    TCAN4x5x_MCAN_ConfigureCCCRRegister(this, &cccr_config);             // Enable FD mode and Bit rate switching
     TCAN4x5x_MCAN_ConfigureGlobalFilter(this, &gfc);                    // Configure the global filter configuration (Default CAN message behavior)
     TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(this, &TCANNomTiming);  // Setup nominal/arbitration bit timing
     TCAN4x5x_MCAN_ConfigureDataTiming_Simple(this, &TCANDataTiming);    // Setup CAN FD timing
@@ -105,22 +143,27 @@ void TCAN4551::init(void) {
     TCAN4x5x_MCAN_ConfigureInterruptEnable(this, &mcan_ie);         // Enable the appropriate registers
 
 
-    /* Setup filters, this filter will mark any message with ID 0x055 as a priority message */
-    TCAN4x5x_MCAN_SID_Filter SID_ID = {0};
-    SID_ID.SFT = TCAN4x5x_SID_SFT_CLASSIC;                      // SFT: Standard filter type. Configured as a classic filter
-    SID_ID.SFEC = TCAN4x5x_SID_SFEC_PRIORITYSTORERX0;           // Standard filter element configuration, store it in RX fifo 0 as a priority message
-    SID_ID.SFID1 = 0x055;                                       // SFID1 (Classic mode Filter)
-    SID_ID.SFID2 = 0x7FF;                                       // SFID2 (Classic mode Mask)
-    TCAN4x5x_MCAN_WriteSIDFilter(this, 0, &SID_ID);                   // Write to the MRAM
+    /* Setup standard filters */
+    for(int i = 0; i < MBED_CONF_TCAN4551_SID_FILTER_COUNT; i++) {
+        TCAN4x5x_MCAN_SID_Filter* SID_ID = &standard_ids[i];
+        *SID_ID = {0};
+        SID_ID->SFT = TCAN4x5x_SID_SFT_CLASSIC;                      // SFT: Standard filter type. Configured as a classic filter
+        SID_ID->SFEC = TCAN4x5x_SID_SFEC_DISABLED;                   // Standard filter element configuration, initially disabled
+        SID_ID->SFID1 = 0x055;                                       // SFID1 (Classic mode Filter)
+        SID_ID->SFID2 = 0x7FF;                                       // SFID2 (Classic mode Mask)
+        TCAN4x5x_MCAN_WriteSIDFilter(this, i, SID_ID);               // Write to the MRAM
+    }
 
-
-    /* Store ID 0x12345678 as a priority message */
-    TCAN4x5x_MCAN_XID_Filter XID_ID = {0};
-    XID_ID.EFT = TCAN4x5x_XID_EFT_CLASSIC;                  // EFT
-    XID_ID.EFEC = TCAN4x5x_XID_EFEC_PRIORITYSTORERX0;       // EFEC
-    XID_ID.EFID1 = 0x12345678;                              // EFID1 (Classic mode filter)
-    XID_ID.EFID2 = 0x1FFFFFFF;                              // EFID2 (Classic mode mask)
-    TCAN4x5x_MCAN_WriteXIDFilter(this, 0, &XID_ID);         // Write to the MRAM
+    /* Setup extended filters */
+    for(int i = 0; i < MBED_CONF_TCAN4551_XID_FILTER_COUNT; i++) {
+        TCAN4x5x_MCAN_XID_Filter* XID_ID = &extended_ids[i];
+        *XID_ID = {0};
+        XID_ID->EFT = TCAN4x5x_XID_EFT_CLASSIC;                  // EFT
+        XID_ID->EFEC = TCAN4x5x_XID_EFEC_DISABLED;               // EFEC, initially disabled
+        XID_ID->EFID1 = 0x12345678;                              // EFID1 (Classic mode filter)
+        XID_ID->EFID2 = 0x1FFFFFFF;                              // EFID2 (Classic mode mask)
+        TCAN4x5x_MCAN_WriteXIDFilter(this, i, XID_ID);           // Write to the MRAM
+    }
 
     /* Configure the TCAN4550 Non-CAN-related functions */
     TCAN4x5x_DEV_CONFIG devConfig = {0};                                // Remember to initialize to 0, or you'll get random garbage!
@@ -230,7 +273,71 @@ int TCAN4551::mode(CanMode mode) {
 
 int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         int handle) {
-    return 0; // TODO
+
+    if(format == CANStandard) {
+
+        TCAN4x5x_MCAN_SID_Filter* handle_ptr;
+        int filter_index = filter_handle_to_index(handle);
+
+        // Disallow accessing a filter handle beyond what's available
+        if(filter_index < 0 || filter_index >= MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
+            return 0;
+        }
+
+        // If the user didn't provide a valid handle
+        if(filter_index == -1) {
+            filter_index = alloc_sid_handle();   // Try to allocate one that's available
+            if(handle_ptr == -1) {               // No filters left to allocate :(
+                return 0;
+            }
+        }
+
+        // Get a pointer to the filter struct
+        handle_ptr = &standard_ids[filter_index];
+
+        // Configure the filter and write it to the controller
+        handle_ptr->SFT = TCAN4x5x_SID_SFT_CLASSIC;
+        handle_ptr->SFEC = TCAN4x5x_SID_SFEC_STORERX0;
+        handle_ptr->SFID1 = id;
+        handle_ptr->SFID2 = mask;
+        TCAN4x5x_MCAN_WriteSIDFilter(this, filter_index, handle_ptr);
+        return filter_index_to_handle(filter_index);
+
+    } else
+    if(format == CANExtended) {
+
+        TCAN4x5x_MCAN_XID_Filter* handle_ptr;
+        int filter_index = filter_handle_to_index(handle);
+
+        // Disallow accessing a filter handle beyond what's available
+        if(filter_index < 0 || filter_index >= MBED_CONF_TCAN4551_XID_FILTER_COUNT) {
+            return 0;
+        }
+
+        // If the user didn't provide a valid handle
+        if(filter_index == -1) {
+            filter_index = alloc_xid_handle();   // Try to allocate one that's available
+            if(handle_ptr == -1) {               // No filters left to allocate :(
+                return 0;
+            }
+        }
+
+        // Get a pointer to the filter struct
+        handle_ptr = &extended_ids[filter_index];
+
+        // Configure the filter and write it to the controller
+        handle_ptr->EFT = TCAN4x5x_XID_EFT_CLASSIC
+        handle_ptr->EFEC = TCAN4x5x_XID_EFEC_STORERX0;
+        handle_ptr->EFID1 = id;
+        handle_ptr->EFID2 = mask;
+        TCAN4x5x_MCAN_WriteXIDFilter(this, filter_index, handle_ptr);
+        return filter_index_to_handle(filter_index);
+    }
+    else {
+        // Invalid input
+        return 0;
+    }
+
 }
 
 void TCAN4551::reset(void) {
@@ -238,7 +345,20 @@ void TCAN4551::reset(void) {
 }
 
 void TCAN4551::monitor(bool silent) {
-    // TODO
+    if(silent) {
+        // Enter monitoring mode
+        cccr_config.MON = 1;
+    } else {
+        // Exit monitoring mode
+        cccr_config.MON = 0;
+    }
+
+    // Start by making protected registers accessible
+    TCAN4x5x_MCAN_EnableProtectedRegisters(this);
+    // Change the config
+    TCAN4x5x_MCAN_ConfigureCCCRRegister(this, &cccr_config);
+    // Disable access to protected registers
+    TCAN4x5x_MCAN_DisableProtectedRegisters(this);
 }
 
 void TCAN4551::_tcan_irq_handler(void) {
