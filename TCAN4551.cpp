@@ -189,7 +189,41 @@ void TCAN4551::init(void) {
 }
 
 int TCAN4551::frequency(int hz) {
-    return 0;// TODO
+
+    // Assumes a 40MHz external clock (crystal or otherwise)
+
+    TCAN4x5x_MCAN_Nominal_Timing_Simple TCANNomTiming = {0};
+    if(hz == 1000E3) {
+        // 1Mbit arbitration with a 40 MHz crystal ((40E6 / 1) / (32 + 8) = 1000E3)
+        TCANNomTiming.NominalBitRatePrescaler = 1;
+        TCANNomTiming.NominalTqBeforeSamplePoint = 32;
+        TCANNomTiming.NominalTqAfterSamplePoint = 8;
+        apply_bitrate_change(TCANNomTiming);
+        return hz;
+    } else if(hz == 500E3) { // 500Kbps
+        // 500Kbit arbitration with a 40 MHz crystal ((40E6 / 2) / (32 + 8) = 500E3)
+        TCANNomTiming.NominalBitRatePrescaler = 2;
+        TCANNomTiming.NominalTqBeforeSamplePoint = 32;
+        TCANNomTiming.NominalTqAfterSamplePoint = 8;
+        apply_bitrate_change(TCANNomTiming);
+        return hz;
+    } else if(hz == 250E3) { // 250Kbps
+        // 250Kbit arbitration with a 40 MHz crystal ((40E6 / 4) / (32 + 8) = 250E3)
+        TCANNomTiming.NominalBitRatePrescaler = 4;
+        TCANNomTiming.NominalTqBeforeSamplePoint = 32;
+        TCANNomTiming.NominalTqAfterSamplePoint = 8;
+        apply_bitrate_change(TCANNomTiming);
+        return hz;
+    } else if(hz == 100E3) { // 100Kbps
+        // 1Mbit arbitration with a 40 MHz crystal ((40E6 / 10) / (32 + 8) = 100E3)
+        TCANNomTiming.NominalBitRatePrescaler = 10;
+        TCANNomTiming.NominalTqBeforeSamplePoint = 32;
+        TCANNomTiming.NominalTqAfterSamplePoint = 8;
+        apply_bitrate_change(TCANNomTiming);
+        return hz;
+    } else {
+        return 0;
+    }
 }
 
 void TCAN4551::attach_irq_handler(can_irq_handler handler, uint32_t id) {
@@ -287,7 +321,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         // If the user didn't provide a valid handle
         if(filter_index == -1) {
             filter_index = alloc_sid_handle();   // Try to allocate one that's available
-            if(handle_ptr == -1) {               // No filters left to allocate :(
+            if(filter_index == -1) {               // No filters left to allocate :(
                 return 0;
             }
         }
@@ -317,7 +351,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         // If the user didn't provide a valid handle
         if(filter_index == -1) {
             filter_index = alloc_xid_handle();   // Try to allocate one that's available
-            if(handle_ptr == -1) {               // No filters left to allocate :(
+            if(filter_index == -1) {               // No filters left to allocate :(
                 return 0;
             }
         }
@@ -326,7 +360,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         handle_ptr = &extended_ids[filter_index];
 
         // Configure the filter and write it to the controller
-        handle_ptr->EFT = TCAN4x5x_XID_EFT_CLASSIC
+        handle_ptr->EFT = TCAN4x5x_XID_EFT_CLASSIC;
         handle_ptr->EFEC = TCAN4x5x_XID_EFEC_STORERX0;
         handle_ptr->EFID1 = id;
         handle_ptr->EFID2 = mask;
@@ -359,6 +393,17 @@ void TCAN4551::monitor(bool silent) {
     TCAN4x5x_MCAN_ConfigureCCCRRegister(this, &cccr_config);
     // Disable access to protected registers
     TCAN4x5x_MCAN_DisableProtectedRegisters(this);
+}
+
+void TCAN4551::apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing) {
+
+    // Start by making protected registers accessible
+    TCAN4x5x_MCAN_EnableProtectedRegisters(this);
+    // Change the config
+    TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(this, &timing);
+    // Disable access to protected registers
+    TCAN4x5x_MCAN_DisableProtectedRegisters(this);
+
 }
 
 void TCAN4551::_tcan_irq_handler(void) {

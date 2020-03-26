@@ -161,6 +161,12 @@ public:
 protected:
 
     /**
+     * Internal function to apply bit rate changes
+     * @param[in] bit rate struct to send to TCAN4x5x
+     */
+    void apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing);
+
+    /**
      * Internal interrupt handler
      */
     void _tcan_irq_handler(void);
@@ -178,7 +184,7 @@ protected:
     unsigned char read_errors;      /** Number of read errors */
     unsigned char write_errors;     /** Number of write errors */
 
-    TCAN4x5x_MCAN_CCCR_Config cccr_config /** TCAN configuration */
+    TCAN4x5x_MCAN_CCCR_Config cccr_config; /** TCAN configuration */
 
 };
 
