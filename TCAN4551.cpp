@@ -256,7 +256,6 @@ int TCAN4551::read(CAN_Message* msg, int handle) {
 
     // See if any of the filtered buffers have a new message for the desired filter
     if(handle != 0) {
-        int filter_index = filter_handle_to_index(handle);
         filtered_buffer_t* buffer = &filtered_buffers[filter_handle_to_index(handle)];
         if(buffer->new_data_available) {
             // New data has been stored in the local buffers, copy it over
@@ -279,9 +278,11 @@ int TCAN4551::read(CAN_Message* msg, int handle) {
                 // Filter matches, copy it over and return it
                 copy_tcan_rx_header(msg, &buffer->rx_header);
                 memcpy(msg->data, buffer->data, num_bytes);
+                return 1;
             } else {
                 // Otherwise, we stored it in the temporary buffer so flag it
                 buffer->new_data_available = true;
+                return 0;
             }
         }
     } else {
@@ -311,13 +312,13 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
 
     if(format == CANStandard) {
 
-        TCAN4x5x_MCAN_SID_Filter* handle_ptr;
-        int filter_index = filter_handle_to_index(handle);
-
         // Disallow accessing a filter handle beyond what's available
-        if(filter_index < 0 || filter_index >= MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
+        if(handle < 0 || handle >= MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
             return 0;
         }
+
+        TCAN4x5x_MCAN_SID_Filter* handle_ptr;
+        int filter_index = filter_handle_to_index(handle);
 
         // If the user didn't provide a valid handle
         if(filter_index == -1) {
@@ -332,7 +333,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
 
         // Configure the filter and write it to the controller
         handle_ptr->SFT = TCAN4x5x_SID_SFT_CLASSIC;
-        handle_ptr->SFEC = TCAN4x5x_SID_SFEC_STORERX0;
+        handle_ptr->SFEC = TCAN4x5x_SID_SFEC_STORERX1;
         handle_ptr->SFID1 = id;
         handle_ptr->SFID2 = mask;
         TCAN4x5x_MCAN_WriteSIDFilter(this, filter_index, handle_ptr);
@@ -341,13 +342,15 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
     } else
     if(format == CANExtended) {
 
+        // Disallow accessing a filter handle beyond what's available
+        if(handle != 0) {
+            if(handle < MBED_CONF_TCAN4551_SID_FILTER_COUNT || handle >= TCAN4551_TOTAL_FILTER_COUNT) {
+                return 0;
+            }
+        }
+
         TCAN4x5x_MCAN_XID_Filter* handle_ptr;
         int filter_index = filter_handle_to_index(handle);
-
-        // Disallow accessing a filter handle beyond what's available
-        if(filter_index < MBED_CONF_TCAN4551_SID_FILTER_COUNT || filter_index >= TCAN4551_TOTAL_FILTER_COUNT) {
-            return 0;
-        }
 
         // If the user didn't provide a valid handle
         if(filter_index == -1) {
@@ -362,7 +365,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
 
         // Configure the filter and write it to the controller
         handle_ptr->EFT = TCAN4x5x_XID_EFT_CLASSIC;
-        handle_ptr->EFEC = TCAN4x5x_XID_EFEC_STORERX0;
+        handle_ptr->EFEC = TCAN4x5x_XID_EFEC_STORERX1;
         handle_ptr->EFID1 = id;
         handle_ptr->EFID2 = mask;
         TCAN4x5x_MCAN_WriteXIDFilter(this, filter_index, handle_ptr);
