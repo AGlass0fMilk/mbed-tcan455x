@@ -257,7 +257,7 @@ int TCAN4551::read(CAN_Message* msg, int handle) {
     // See if any of the filtered buffers have a new message for the desired filter
     if(handle != 0) {
         int filter_index = filter_handle_to_index(handle);
-        filtered_buffer_t* buffer = filtered_buffers[filter_handle_to_index(handle)];
+        filtered_buffer_t* buffer = &filtered_buffers[filter_handle_to_index(handle)];
         if(buffer->new_data_available) {
             // New data has been stored in the local buffers, copy it over
             copy_tcan_rx_header(msg, &buffer->rx_header);
