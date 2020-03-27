@@ -14,11 +14,34 @@
 
 #include "TCAN4x5x_Data_Structs.h"
 
+#define TCAN4551_TOTAL_FILTER_COUNT (MBED_CONF_TCAN4551_SID_FILTER_COUNT+MBED_CONF_TCAN4551_XID_FILTER_COUNT)
+
 /**
  * TCAN4551 driver
  */
 class TCAN4551
 {
+
+protected:
+
+    /**
+     * Filtered buffer control structure
+     *
+     * Since filtered messages are stored in a FIFO, we
+     * must store them in a buffer if the application
+     * reads the FIFO looking for messages from one filter
+     * and subsequently dequeues messages from another filter
+     */
+    typedef struct filtered_buffer_t {
+        TCAN4x5x_MCAN_RX_Header rx_header;
+        bool new_data_available;
+        union {
+            TCAN4x5x_MCAN_SID_Filter sid_filter;
+            TCAN4x5x_MCAN_XID_Filter xid_filter;
+        };
+        uint8_t data[8]; // TODO - update this to be configurable in size
+    } filtered_buffer_t;
+
 
 public:
 
@@ -104,6 +127,8 @@ public:
 
     /**
      * Resets the TCAN4551
+     *
+     * @note init must be called again after calling reset!
      */
     void reset(void);
 
@@ -171,6 +196,47 @@ protected:
      */
     void _tcan_irq_handler(void);
 
+    /**
+     * 0 is not a valid handle, so map the index to a different number (add 1)
+     */
+    inline int filter_handle_to_index(int handle) {
+        return handle-1;
+    }
+
+    inline int filter_index_to_handle(int index) {
+        return index+1;
+    }
+
+    /*
+     *  Internal function to allocate a standard ID filter handle
+     *  @retval Index of allocated handle in static array, -1 if out of memory
+     */
+    int alloc_sid_handle_index(void) {
+        if(standard_id_index < MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
+            return standard_id_index++;
+        } else {
+            return -1;
+        }
+    }
+
+    /*
+     *  Internal function to allocate an extended ID filter handle
+     *  @retval Index of allocated handle in static array, -1 if out of memory
+     */int alloc_xid_handle_index(void) {
+        if(extended_id_index < MBED_CONF_TCAN4551_XID_FILTER_COUNT) {
+            return (MBED_CONF_TCAN4551_SID_FILTER_COUNT + extended_id_index++);
+        } else {
+            return -1;
+        }
+    }
+
+     /**
+      * Copies a TCAN4551-format header over to Mbed's CAN_Message format
+      * @param[in] msg Mbed CAN_Message struct destination
+      * @param[in] header TCAN4551 rx header struct source
+      */
+     static void copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* header);
+
 protected:
 
     mbed::SPI spi;                  /** SPI interface to TCAN4551 */
@@ -185,6 +251,15 @@ protected:
     unsigned char write_errors;     /** Number of write errors */
 
     TCAN4x5x_MCAN_CCCR_Config cccr_config; /** TCAN configuration */
+
+    /**
+     * Array of filtered buffer control blocks
+     * The SID filters come first (starting at index 0)
+     * and the XID filters come after that (starting at MBED_CONF_TCAN4551_SID_FILTER_COUNT)
+     */
+    filtered_buffer_t filtered_buffers[TCAN4551_TOTAL_FILTER_COUNT];
+    int standard_id_index;
+    int extended_id_index;
 
 };
 

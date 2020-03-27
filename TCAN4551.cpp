@@ -12,46 +12,13 @@
 #include "platform/mbed_assert.h"
 #include "platform/Callback.h"
 
-static TCAN4x5x_MCAN_SID_Filter standard_ids[MBED_CONF_TCAN4551_SID_FILTER_COUNT] = {0};
-static int standard_id_index = 0;
-
-static TCAN4x5x_MCAN_XID_Filter extended_ids[MBED_CONF_TCAN4551_XID_FILTER_COUNT] = {0};
-static int extended_id_index = 0;
-
-inline int filter_handle_to_index(int handle) {
-    return handle-1;
-}
-
-inline int filter_index_to_handle(int index) {
-    return index+1;
-}
-
-/*
- *  Internal function to allocate a standard ID filter handle
- *  @retval Index of allocated handle in static array, -1 if out of memory
- */
-int alloc_sid_handle(void) {
-    if(standard_id_index < MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
-        return standard_id_index++;
-    } else {
-        return -1;
-    }
-}
-
-/*
- *  Internal function to allocate an extended ID filter handle
- *  @retval Index of allocated handle in static array, -1 if out of memory
- */int alloc_xid_handle(void) {
-    if(extended_id_index < MBED_CONF_TCAN4551_XID_FILTER_COUNT) {
-        return extended_id_index++;
-    } else {
-        return -1;
-    }
-}
-
 TCAN4551::TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn,
         PinName nint_pin) : spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), nint(nint_pin, PullUp),
-        irq_handler(NULL), id(0), irq_mask(0), read_errors(0), write_errors(0) {
+        irq_handler(NULL), id(0), irq_mask(0), read_errors(0), write_errors(0),
+        standard_id_index(0), extended_id_index(0){
+    for(int i = 0; i < TCAN4551_TOTAL_FILTER_COUNT; i++) {
+        memset(&filtered_buffers[i], 0, sizeof(filtered_buffer_t));
+    }
 }
 
 TCAN4551::~TCAN4551() {
@@ -101,26 +68,29 @@ void TCAN4551::init(void) {
 
     /* ************************************************************************
      * In the next configuration block, we will set the MCAN core up to have:
-     *   - 3 SID filter elements
-     *   - 3 XID Filter elements
+     *   - 3 SID filter elements (default, configurable with MBED_CONF_TCAN4551_SID_FILTER_COUNT)
+     *   - 3 XID Filter elements (default, configurable with MBED_CONF_TCAN4551_XID_FILTER_COUNT)
      *   - 5 RX FIFO 0 elements
-     *   - RX FIFO 0 supports data payloads up to 64 bytes
-     *   - RX FIFO 1 and RX Buffer will not have any elements, but we still set their data payload sizes, even though it's not required
+     *   - RX FIFO 0 is where unfiltered packets go
+     *   - RX FIFO 1 is where filtered messages go
+     *   - RX Buffer is unused
      *   - No TX Event FIFOs
-     *   - 2 Transmit buffers supporting up to 64 bytes of data payload
+     *   - 2 Transmit buffers
      */
+
+    // TODO - will need to increase the element size for CAN-FD
     TCAN4x5x_MRAM_Config MRAMConfiguration = {0};
     MRAMConfiguration.SIDNumElements = MBED_CONF_TCAN4551_SID_FILTER_COUNT; // Standard ID number of elements, you MUST have a filter written to MRAM for each element defined
     MRAMConfiguration.XIDNumElements = MBED_CONF_TCAN4551_XID_FILTER_COUNT; // Extended ID number of elements, you MUST have a filter written to MRAM for each element defined
     MRAMConfiguration.Rx0NumElements = 5;                       // RX0 Number of elements
-    MRAMConfiguration.Rx0ElementSize = MRAM_64_Byte_Data;       // RX0 data payload size
-    MRAMConfiguration.Rx1NumElements = 0;                       // RX1 number of elements
-    MRAMConfiguration.Rx1ElementSize = MRAM_64_Byte_Data;       // RX1 data payload size
+    MRAMConfiguration.Rx0ElementSize = MRAM_8_Byte_Data;        // RX0 data payload size
+    MRAMConfiguration.Rx1NumElements = 5;                       // RX1 number of elements
+    MRAMConfiguration.Rx1ElementSize = MRAM_8_Byte_Data;        // RX1 data payload size
     MRAMConfiguration.RxBufNumElements = 0;                     // RX buffer number of elements
     MRAMConfiguration.RxBufElementSize = MRAM_64_Byte_Data;     // RX buffer data payload size
     MRAMConfiguration.TxEventFIFONumElements = 0;               // TX Event FIFO number of elements
     MRAMConfiguration.TxBufferNumElements = 2;                  // TX buffer number of elements
-    MRAMConfiguration.TxBufferElementSize = MRAM_64_Byte_Data;  // TX buffer data payload size
+    MRAMConfiguration.TxBufferElementSize = MRAM_8_Byte_Data;   // TX buffer data payload size
 
 
     /* Configure the MCAN core with the settings above, the changes in this block are write protected registers,      *
@@ -139,13 +109,14 @@ void TCAN4551::init(void) {
     /* Set the interrupts we want to enable for MCAN */
     TCAN4x5x_MCAN_Interrupt_Enable mcan_ie = {0};                   // Remember to initialize to 0, or you'll get random garbage!
     mcan_ie.RF0NE = 1;                                              // RX FIFO 0 new message interrupt enable
+    mcan_ie.RF1NE = 1;                                              // RX FIFO 1 new message interrupt enable
 
     TCAN4x5x_MCAN_ConfigureInterruptEnable(this, &mcan_ie);         // Enable the appropriate registers
 
 
     /* Setup standard filters */
     for(int i = 0; i < MBED_CONF_TCAN4551_SID_FILTER_COUNT; i++) {
-        TCAN4x5x_MCAN_SID_Filter* SID_ID = &standard_ids[i];
+        TCAN4x5x_MCAN_SID_Filter* SID_ID = &filtered_buffers[i].sid_filter;
         *SID_ID = {0};
         SID_ID->SFT = TCAN4x5x_SID_SFT_CLASSIC;                      // SFT: Standard filter type. Configured as a classic filter
         SID_ID->SFEC = TCAN4x5x_SID_SFEC_DISABLED;                   // Standard filter element configuration, initially disabled
@@ -156,7 +127,7 @@ void TCAN4551::init(void) {
 
     /* Setup extended filters */
     for(int i = 0; i < MBED_CONF_TCAN4551_XID_FILTER_COUNT; i++) {
-        TCAN4x5x_MCAN_XID_Filter* XID_ID = &extended_ids[i];
+        TCAN4x5x_MCAN_XID_Filter* XID_ID = &filtered_buffers[MBED_CONF_TCAN4551_SID_FILTER_COUNT+i].xid_filter;
         *XID_ID = {0};
         XID_ID->EFT = TCAN4x5x_XID_EFT_CLASSIC;                  // EFT
         XID_ID->EFEC = TCAN4x5x_XID_EFEC_DISABLED;               // EFEC, initially disabled
@@ -281,24 +252,54 @@ int TCAN4551::read(CAN_Message* msg, int handle) {
         TCAN4x5x_Device_ClearSPIERR(this);
     }
 
-    if(mcan_ir.RF0N) {
+    TCAN4x5x_MCAN_ClearInterrupts(this, &mcan_ir);
+
+    // See if any of the filtered buffers have a new message for the desired filter
+    if(handle != 0) {
+        int filter_index = filter_handle_to_index(handle);
+        filtered_buffer_t* buffer = filtered_buffers[filter_handle_to_index(handle)];
+        if(buffer->new_data_available) {
+            // New data has been stored in the local buffers, copy it over
+            copy_tcan_rx_header(msg, &buffer->rx_header);
+            memcpy(msg->data, buffer->data, buffer->rx_header.DLC);
+            buffer->new_data_available = false;
+            return 1;
+        } else {
+            // See if the FIFO1 has a new filtered message for us
+            uint8_t num_bytes = 0;
+            num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO1, &buffer->rx_header, buffer->data);
+            if(num_bytes == 0) {
+                return 0; // No filtered messages received
+            }
+
+            // Make sure this new filtered message matches the given filter
+            uint32_t filter_id = (buffer->rx_header.XTD?
+                                  buffer->xid_filter.EFID1 : buffer->sid_filter.SFID1);
+            if(filter_id == buffer->rx_header.ID) {
+                // Filter matches, copy it over and return it
+                copy_tcan_rx_header(msg, &buffer->rx_header);
+                memcpy(msg->data, buffer->data, num_bytes);
+            } else {
+                // Otherwise, we stored it in the temporary buffer so flag it
+                buffer->new_data_available = true;
+            }
+        }
+    } else {
+        // Attempt to read FIFO0 (unfiltered messages)
+
         TCAN4x5x_MCAN_RX_Header msg_header = {0};
         uint8_t num_bytes = 0;
 
-        TCAN4x5x_MCAN_ClearInterrupts(this, &mcan_ir);
-
         num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO0, &msg_header, msg->data);
 
-        if(handle != 0 && handle != msg_header.ID) {
-            return 0; // Received message was filtered out
+        if(num_bytes == 0) {
+            return 0; // No message received
         } else {
+            // Copy over the header information
+            copy_tcan_rx_header(msg, &msg_header);
             return 1;
         }
-
-    } else {
-        return 0; // No message arrived
     }
-
 }
 
 int TCAN4551::mode(CanMode mode) {
@@ -320,14 +321,14 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
 
         // If the user didn't provide a valid handle
         if(filter_index == -1) {
-            filter_index = alloc_sid_handle();   // Try to allocate one that's available
+            filter_index = alloc_sid_handle_index();   // Try to allocate one that's available
             if(filter_index == -1) {               // No filters left to allocate :(
                 return 0;
             }
         }
 
         // Get a pointer to the filter struct
-        handle_ptr = &standard_ids[filter_index];
+        handle_ptr = &filtered_buffers[filter_index].sid_filter;
 
         // Configure the filter and write it to the controller
         handle_ptr->SFT = TCAN4x5x_SID_SFT_CLASSIC;
@@ -344,20 +345,20 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         int filter_index = filter_handle_to_index(handle);
 
         // Disallow accessing a filter handle beyond what's available
-        if(filter_index < 0 || filter_index >= MBED_CONF_TCAN4551_XID_FILTER_COUNT) {
+        if(filter_index < MBED_CONF_TCAN4551_SID_FILTER_COUNT || filter_index >= TCAN4551_TOTAL_FILTER_COUNT) {
             return 0;
         }
 
         // If the user didn't provide a valid handle
         if(filter_index == -1) {
-            filter_index = alloc_xid_handle();   // Try to allocate one that's available
+            filter_index = alloc_xid_handle_index();   // Try to allocate one that's available
             if(filter_index == -1) {               // No filters left to allocate :(
                 return 0;
             }
         }
 
         // Get a pointer to the filter struct
-        handle_ptr = &extended_ids[filter_index];
+        handle_ptr = &filtered_buffers[filter_index].xid_filter;
 
         // Configure the filter and write it to the controller
         handle_ptr->EFT = TCAN4x5x_XID_EFT_CLASSIC;
@@ -375,7 +376,13 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
 }
 
 void TCAN4551::reset(void) {
-    // TODO
+    // TODO - add ability to configure a hardware reset pin?
+    TCAN4x5x_DEV_CONFIG devConfig = {0};    // Remember to initialize to 0, or you'll get random garbage!
+    devConfig.DEVICE_RESET = 1;             // Request a software reset
+
+    // Issue the software reset
+    TCAN4x5x_Device_Configure(this, &devConfig);
+
 }
 
 void TCAN4551::monitor(bool silent) {
@@ -411,6 +418,13 @@ void TCAN4551::_tcan_irq_handler(void) {
     if(this->irq_handler != NULL) {
 //        this->irq_handler(this->id); // TODO - add interrupt type info
     }
+}
+
+void TCAN4551::copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* header) {
+    msg->id = header->ID;
+    msg->len = header->DLC;
+    msg->format = (header->XTD? CANExtended : CANStandard);
+    msg->type = CANData;
 }
 
 
