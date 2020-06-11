@@ -56,9 +56,26 @@ extern "C" {
         // Make sure the rd/td are valid
         MBED_ASSERT((pins->rd != NC) && (pins->td != NC));
 
+        mbed::DigitalOut* rst = nullptr;
+        mbed::DigitalOut* wake_ctl = nullptr;
+
+#if (MBED_CONF_TCAN4551_NUMBER_OF_TCANS == 1)
+        if(MBED_CONF_TCAN4551_DEFAULT_TCAN_RST != NC) {
+            rst = new mbed::DigitalOut(MBED_CONF_TCAN4551_DEFAULT_TCAN_RST, 0); // TODO where should this get deleted? Use SharedPtr?
+        }
+#endif
+
+#if (MBED_CONF_TCAN4551_DEFAULT_TCAN_WAKE_CTL == NC)
+#warning TCAN4551 wake control pin not configured. The MCU will be unable to autonomously wake the TCAN from sleep mode.
+#endif
+        if(MBED_CONF_TCAN4551_DEFAULT_TCAN_WAKE_CTL != NC) {
+            wake_ctl = new mbed::DigitalOut(MBED_CONF_TCAN4551_DEFAULT_TCAN_WAKE_CTL, 0);
+        }
+
+
         // Create the TCAN driver object
         TCAN4551* tcan = new TCAN4551(pins->mosi,
-                pins->miso, pins->sclk, pins->csn, pins->nint);
+                pins->miso, pins->sclk, pins->csn, pins->nint, rst, wake_ctl);
 
         obj->instance_ptr = tcan;
 

@@ -11,11 +11,13 @@
 
 #include "platform/mbed_assert.h"
 #include "platform/Callback.h"
+#include "platform/mbed_wait_api.h"
 
-TCAN4551::TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn,
-        PinName nint_pin) : spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), nint(nint_pin, PullUp),
-        irq_handler(NULL), id(0), irq_mask(0), read_errors(0), write_errors(0),
-        standard_id_index(0), extended_id_index(0){
+TCAN4551::TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
+        mbed::DigitalOut* rst, mbed::DigitalOut* wake_ctl) : spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), nint(nint_pin, PullUp),
+        _rst(rst), _wake_ctl(wake_ctl), irq_handler(NULL), id(0), irq_mask(0), read_errors(0), write_errors(0),
+        standard_id_index(0), extended_id_index(0)
+{
     for(int i = 0; i < TCAN4551_TOTAL_FILTER_COUNT; i++) {
         memset(&filtered_buffers[i], 0, sizeof(filtered_buffer_t));
     }
@@ -25,6 +27,13 @@ TCAN4551::~TCAN4551() {
 }
 
 void TCAN4551::init(void) {
+
+    // Wake the chip up using hardware pin, if available
+    if(_wake_ctl != nullptr) {
+        _wake_ctl->write(1);
+        wait_us(60);    // Wait > t_WAKE (50us)
+        _wake_ctl->write(0);
+    }
 
 #ifndef NDEBUG
     TCAN4x5x_Device_ReadDeviceVersion(this);
@@ -379,12 +388,20 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
 }
 
 void TCAN4551::reset(void) {
-    // TODO - add ability to configure a hardware reset pin?
-    TCAN4x5x_DEV_CONFIG devConfig = {0};    // Remember to initialize to 0, or you'll get random garbage!
-    devConfig.DEVICE_RESET = 1;             // Request a software reset
 
-    // Issue the software reset
-    TCAN4x5x_Device_Configure(this, &devConfig);
+    // Use software reset if there's no dedicated RST output pin
+    if(_rst == nullptr) {
+        TCAN4x5x_DEV_CONFIG devConfig = {0};    // Remember to initialize to 0, or you'll get random garbage!
+        devConfig.DEVICE_RESET = 1;             // Request a software reset
+
+        // Issue the software reset
+        TCAN4x5x_Device_Configure(this, &devConfig);
+    } else {
+        _rst->write(1); // Pull reset high
+        wait_us(30);    // Wait t_PulseWidth (30us)
+        _rst->write(0); // Pull reset low again
+        wait_us(750);   // Wait >700us before communicating
+    }
 
 }
 

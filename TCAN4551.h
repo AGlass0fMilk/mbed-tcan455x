@@ -11,6 +11,7 @@
 #include "drivers/CAN.h"
 #include "drivers/SPI.h"
 #include "drivers/InterruptIn.h"
+#include "drivers/DigitalOut.h"
 
 #include "TCAN4x5x_Data_Structs.h"
 
@@ -45,7 +46,18 @@ protected:
 
 public:
 
-    TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin);
+    /**
+     * Create a TCAN4551 interface
+     * @param[in] mosi MOSI pin name to use for SPI
+     * @param[in] miso MISO pin name to use for SPI
+     * @param[in] sclk SCLK pin name to use for SPI
+     * @param[in] csn Chip select pin name to use for SPI
+     * @param[in] nint_pin Interrupt in pin name to use
+     * @param[in] rst (Optional) Hardware reset control, if used (active high)
+     * @param[in] wake_ctl (Optional) Wake control output (active high). Pulls WAKE pin low through an external transistor
+     */
+    TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
+            mbed::DigitalOut* rst = nullptr, mbed::DigitalOut* wake_ctl = nullptr);
 
     virtual ~TCAN4551();
 
@@ -241,6 +253,8 @@ protected:
 
     mbed::SPI spi;                  /** SPI interface to TCAN4551 */
     mbed::InterruptIn nint;         /** nINT interrupt input pin */
+    mbed::DigitalOut* _rst;         /** RST output */
+    mbed::DigitalOut* _wake_ctl;   /** Wake control output */
 
     can_irq_handler irq_handler;    /** IRQ handler function */
     uint32_t id;                    /** ID given by C++ API to can_irq_init */

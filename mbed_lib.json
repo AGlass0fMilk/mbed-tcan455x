@@ -21,6 +21,14 @@
 	    "help": "Default TCAN nINT pin. Not used if multiple TCAN interfaces are enabled",
 	    "value": "NC"
 	},
+        "default-tcan-rst": {
+            "help": "Default TCAN RST pin. Not used if multiple TCAN interfaces are enabled",
+            "value": "NC"
+        },
+        "default-tcan-wake-ctl": {
+            "help": "Default TCAN wake_ctl pin. Pulls WAKE low through external transistor",
+            "value": "NC"
+        },
 	"number-of-tcans": {
 	    "help": "Number of TCAN interfaces available. If set to more than 1 you must do more configuration. See documentation",
 	    "value": 1
