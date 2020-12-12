@@ -23,6 +23,10 @@
 #include "platform/Callback.h"
 #include "platform/mbed_wait_api.h"
 
+#include "mbed_trace.h"
+
+#define TRACE_GROUP "tcan"
+
 TCAN4551::TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
         mbed::DigitalOut* rst, mbed::DigitalOut* wake_ctl) : spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), nint(nint_pin, PullUp),
         _rst(rst), _wake_ctl(wake_ctl), irq_handler(NULL), id(0), irq_mask(0), read_errors(0), write_errors(0),
@@ -251,13 +255,25 @@ int TCAN4551::write(CAN_Message msg, int cc) {
     header.EFC  = 0;
     header.MM   = 0;
     header.RTR  = 0;
-    header.XTD  = 0;
+    header.XTD  = (msg.format == CANExtended);
     header.ESI  = 0;
 
-    TCAN4x5x_MCAN_WriteTXBuffer(this, 0, &header, msg.data);
-    TCAN4x5x_MCAN_TransmitBufferContents(this, 0);
-
-    return 1; // TODO - how to check if it actually succeeded? wait for interrupt?
+    /* This claims to return "number of bytes read" but I think that's a copy-paste mistake
+     * At time of writing (using TCAN45xx driver rev B), the return value is:
+     * 0 on failure,
+     * 1 << bufIndex (second parameter) on success
+     */
+    uint32_t retval = TCAN4x5x_MCAN_WriteTXBuffer(this, 0, &header, msg.data);
+    if(retval != 1) {
+        tr_err("failed to write TX buffer");
+        return 0;
+    }
+    if(TCAN4x5x_MCAN_TransmitBufferContents(this, 0)) {
+        return 1;
+    } else {
+        tr_err("failed to transmit TX buffer contents");
+        return 0;
+    }
 }
 
 int TCAN4551::read(CAN_Message* msg, int handle) {
