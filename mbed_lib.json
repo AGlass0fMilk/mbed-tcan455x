@@ -1,38 +1,6 @@
 {
     "name": "tcan4551",
     "config": {
-        "default-tcan-mosi": {
-            "help": "Default TCAN MOSI pin. Not used if multiple TCAN interfaces are enabled. This is also the td pin that should be used to instantiate the CAN instance.",
-            "value": "NC"
-        },
-	"default-tcan-miso": {
-            "help": "Default TCAN MISO pin. Not used if multiple TCAN interfaces are enabled. This is also the rd pin that should be used to instantiate the CAN instance",
-            "value": "NC"
-        },
-	"default-tcan-sclk": {
-            "help": "Default TCAN SCLK pin. Not used if multiple TCAN interfaces are enabled",
-            "value": "NC"
-        },
-	"default-tcan-csn": {
-            "help": "Default TCAN CSN  pin. Not used if multiple TCAN interfaces are enabled",
-            "value": "NC"
-        },
-	"default-tcan-nint": {
-	    "help": "Default TCAN nINT pin. Not used if multiple TCAN interfaces are enabled",
-	    "value": "NC"
-	},
-        "default-tcan-rst": {
-            "help": "Default TCAN RST pin. Not used if multiple TCAN interfaces are enabled",
-            "value": "NC"
-        },
-        "default-tcan-wake-ctl": {
-            "help": "Default TCAN wake_ctl pin. Pulls WAKE low through external transistor",
-            "value": "NC"
-        },
-	"number-of-tcans": {
-	    "help": "Number of TCAN interfaces available. If set to more than 1 you must do more configuration. See documentation",
-	    "value": 1
-	},
         "enable-fd": {
             "help": "Enable CAN flexible data rate (not compatible with CAN2.0a/b",
             "value": false
@@ -44,11 +12,6 @@
         "xid-filter-count": {
             "help": "Configure the number of extended (29-bit ID) filters",
             "value": 3
-        }
-    },
-    "target_overrides": {
-        "*": {
-            "target.device_has_add": ["CAN","CANFD"]
         }
     }
 }

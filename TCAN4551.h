@@ -18,10 +18,15 @@
 #ifndef MBED_TCAN4551_TCAN4551_H_
 #define MBED_TCAN4551_TCAN4551_H_
 
-#include "drivers/CAN.h"
+#if DEVICE_SPI && FEATURE_EXPERIMENTAL_API
+
+#include "drivers/interfaces/InterfaceCAN.h"
 #include "drivers/SPI.h"
 #include "drivers/InterruptIn.h"
 #include "drivers/DigitalOut.h"
+
+#include "platform/NonCopyable.h"
+#include "platform/PlatformMutex.h"
 
 #include "TCAN4x5x_Data_Structs.h"
 
@@ -30,7 +35,7 @@
 /**
  * TCAN4551 driver
  */
-class TCAN4551
+class TCAN4551 final : public mbed::interface::CAN, private mbed::NonCopyable<TCAN4551>
 {
 
 protected:
@@ -69,16 +74,36 @@ public:
     TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
             mbed::DigitalOut* rst = nullptr, mbed::DigitalOut* wake_ctl = nullptr);
 
-    virtual ~TCAN4551();
+    ~TCAN4551();
 
     /**
-     * Gets the TCAN4551 driver associated with the given CAN object
-     * @param[in] can_handle Handle of Mbed CAN object
-     * @retval tcan Corresponding TCAN driver object
+     * Initialize the chip. It is okay to call this multiple times.
+     *
+     * This must be called at startup to put the TCAN455x into a known state.
+     * If it is not called the TCAN may go to sleep because it hasn't been configured properly.
+     *
+     * If the MCU is powered by the TCAN's internal LDO, this will shut down the MCU
+     *
+     * This is lazily called by all methods that access the TCAN over SPI
+     *
+     * @note calling reset will deinitialize the chip
      */
-//    static TCAN4551& get_tcan_handle(mbed::CAN& can_handle);
+    void init(void);
 
-    virtual void init(void);
+    /**
+     * Enter sleep mode
+     *
+     * @note The SPI interface of the TCAN455x is shut down in sleep mode.
+     * You will have to wake the TCAN with an external signal (eg: reset, see datasheet for others)
+     *
+     * @note An incoming CAN frame will wake the TCAN automatically
+     *
+     * @note If the MCU is powered by the TCAN's internal LDO, this will
+     * power down the TCAN and the MCU!
+     */
+    void sleep(void);
+
+    /** InterfaceCAN overrides */
 
     /**
      * Sets the frequency of the CAN transmission
@@ -88,78 +113,37 @@ public:
      *
      * @param[in] hz Frequency of bus
      */
-    int frequency(int hz);
+    int frequency(int hz) override;
 
-    /**
-     * Attaches an interrupt handler
-     * @param[in] interrupt handler
-     * @param[in] id to use
-     */
-    void attach_irq_handler(can_irq_handler handler, uint32_t id);
+    int write(mbed::CANMessage msg) override;
 
-    /**
-     * Detaches interrupt handler
-     */
-    void detach_irq_handler(void);
+    int read(mbed::CANMessage &msg, int handle = 0) override;
 
-    /**
-     * Enables the given CanIrqType
+    void reset() override;
+
+    void monitor(bool silent) override;
+
+    int mode(mbed::interface::can::Mode mode) override;
+
+    int filter(unsigned int id, unsigned int mask, CANFormat format = CANAny, int handle = 0) override;
+
+    unsigned char rderror() override {
+        return _read_errors;
+    }
+
+    unsigned char tderror() override {
+        return _write_errors;
+    }
+
+    /** Attach a function to call whenever a CAN frame received interrupt is
+     *  generated.
      *
-     * @param[in] irq_type Type of irq to enable
-     */
-    void enable_irq(CanIrqType type);
-
-    /**
-     * Disables the given CanIrqType
+     *  This function locks the deep sleep while a callback is attached
      *
-     * @param[in] irq_type Type of irq to disable
+     *  @param func A pointer to a void function, or 0 to set as none
+     *  @param type Which CAN interrupt to attach the member function to (CAN::RxIrq for message received, CAN::TxIrq for transmitted or aborted, CAN::EwIrq for error warning, CAN::DoIrq for data overrun, CAN::WuIrq for wake-up, CAN::EpIrq for error passive, CAN::AlIrq for arbitration lost, CAN::BeIrq for bus error)
      */
-    void disable_irq(CanIrqType type);
-
-    /**
-     * Write a CANMessage to the TCAN4551
-     */
-    virtual int write(CAN_Message msg, int cc);
-
-    /**
-     * Read a CANMessage from the TCAN4551
-     */
-    virtual int read(CAN_Message* msg, int handle = 0);
-
-    /**
-     * Sets the CAN controller to the desired mode
-     * @param[in] mode Mode to enter
-     * @retval result 0 if mode change failed or unsupported
-     *                1 if mode change was successful
-     */
-    virtual int mode(CanMode mode);
-
-    /** Filter out incoming messages
-     *
-     *  @param id the id to filter on
-     *  @param mask the mask applied to the id
-     *  @param format format to filter on (Default CANAny)
-     *  @param handle message filter handle (Optional)
-     *
-     *  @returns
-     *    0 if filter change failed or unsupported,
-     *    new filter handle if successful
-     */
-    virtual int filter(unsigned int id, unsigned int mask, CANFormat format = CANAny, int handle = 0);
-
-    /**
-     * Resets the TCAN4551
-     *
-     * @note init must be called again after calling reset!
-     */
-    void reset(void);
-
-    /**
-     * Puts or removes the TCAN interface into silent monitoring mode
-     * @param silent boolean indicating whether to go into silent mode or not
-     */
-    void monitor(bool silent);
-
+    void attach(mbed::Callback<void()> func, IrqType type = IrqType::RxIrq) override;
 
 
 #if MBED_CONF_TCAN4551_ENABLE_FD && DEVICE_CANFD
@@ -193,19 +177,13 @@ public:
 
 #endif
 
-    unsigned char get_read_errors() const {
-        return read_errors;
-    }
-
-    unsigned char get_write_errors() const {
-        return write_errors;
-    }
-
-    mbed::SPI& get_spi_handle() {
-        return spi;
-    }
-
 protected:
+
+    inline void initialize_if() {
+        if(!_initialized) {
+            init();
+        }
+    }
 
     /**
      * Internal function to apply bit rate changes
@@ -234,8 +212,8 @@ protected:
      *  @retval Index of allocated handle in static array, -1 if out of memory
      */
     int alloc_sid_handle_index(void) {
-        if(standard_id_index < MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
-            return standard_id_index++;
+        if(_standard_id_index < MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
+            return _standard_id_index++;
         } else {
             return -1;
         }
@@ -245,8 +223,8 @@ protected:
      *  Internal function to allocate an extended ID filter handle
      *  @retval Index of allocated handle in static array, -1 if out of memory
      */int alloc_xid_handle_index(void) {
-        if(extended_id_index < MBED_CONF_TCAN4551_XID_FILTER_COUNT) {
-            return (MBED_CONF_TCAN4551_SID_FILTER_COUNT + extended_id_index++);
+        if(_extended_id_index < MBED_CONF_TCAN4551_XID_FILTER_COUNT) {
+            return (MBED_CONF_TCAN4551_SID_FILTER_COUNT + _extended_id_index++);
         } else {
             return -1;
         }
@@ -259,32 +237,40 @@ protected:
       */
      static void copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* header);
 
+     /**
+      * Used by the underlying TI driver
+      */
+     friend mbed::SPI &get_spi_handle(TCAN4551 *ptr);
+
 protected:
 
-    mbed::SPI spi;                  /** SPI interface to TCAN4551 */
-    mbed::InterruptIn nint;         /** nINT interrupt input pin */
+    mbed::SPI _spi;                 /** SPI interface to TCAN4551 */
+    mbed::InterruptIn _nint;        /** nINT interrupt input pin */
     mbed::DigitalOut* _rst;         /** RST output */
-    mbed::DigitalOut* _wake_ctl;   /** Wake control output */
+    mbed::DigitalOut* _wake_ctl;    /** Wake control output */
 
-    can_irq_handler irq_handler;    /** IRQ handler function */
-    uint32_t id;                    /** ID given by C++ API to can_irq_init */
+    unsigned char _read_errors;     /** Number of read errors */
+    unsigned char _write_errors;    /** Number of write errors */
 
-    uint32_t irq_mask;              /** Bitflags for enabled IRQs */
-
-    unsigned char read_errors;      /** Number of read errors */
-    unsigned char write_errors;     /** Number of write errors */
-
-    TCAN4x5x_MCAN_CCCR_Config cccr_config; /** TCAN configuration */
+    TCAN4x5x_MCAN_CCCR_Config _cccr_config; /** TCAN configuration */
 
     /**
      * Array of filtered buffer control blocks
      * The SID filters come first (starting at index 0)
      * and the XID filters come after that (starting at MBED_CONF_TCAN4551_SID_FILTER_COUNT)
      */
-    filtered_buffer_t filtered_buffers[TCAN4551_TOTAL_FILTER_COUNT];
-    int standard_id_index;
-    int extended_id_index;
+    filtered_buffer_t _filtered_buffers[TCAN4551_TOTAL_FILTER_COUNT];
+    int _standard_id_index;
+    int _extended_id_index;
+
+    mbed::Callback<void()>    _irq[IrqType::IrqCnt];
+
+    bool _initialized = false;
+
+    PlatformMutex _mutex;
 
 };
+
+#endif /* DEVICE_CAN */
 
 #endif /* MBED_TCAN4551_TCAN4551_H_ */

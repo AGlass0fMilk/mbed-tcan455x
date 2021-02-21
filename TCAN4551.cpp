@@ -15,6 +15,8 @@
  * limitations under the License
  */
 
+#if DEVICE_SPI && FEATURE_EXPERIMENTAL_API
+
 #include "TCAN4551.h"
 
 #include "TCAN4550.h" /** TI driver header file */
@@ -22,18 +24,19 @@
 #include "platform/mbed_assert.h"
 #include "platform/Callback.h"
 #include "platform/mbed_wait_api.h"
+#include "platform/ScopedLock.h"
 
 #include "mbed_trace.h"
 
 #define TRACE_GROUP "tcan"
 
 TCAN4551::TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
-        mbed::DigitalOut* rst, mbed::DigitalOut* wake_ctl) : spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), nint(nint_pin, PullUp),
-        _rst(rst), _wake_ctl(wake_ctl), irq_handler(NULL), id(0), irq_mask(0), read_errors(0), write_errors(0),
-        standard_id_index(0), extended_id_index(0)
+        mbed::DigitalOut* rst, mbed::DigitalOut* wake_ctl) : _spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), _nint(nint_pin, PullUp),
+        _rst(rst), _wake_ctl(wake_ctl), _read_errors(0), _write_errors(0),
+        _standard_id_index(0), _extended_id_index(0)
 {
     for(int i = 0; i < TCAN4551_TOTAL_FILTER_COUNT; i++) {
-        memset(&filtered_buffers[i], 0, sizeof(filtered_buffer_t));
+        memset(&_filtered_buffers[i], 0, sizeof(filtered_buffer_t));
     }
 }
 
@@ -41,6 +44,12 @@ TCAN4551::~TCAN4551() {
 }
 
 void TCAN4551::init(void) {
+
+    mbed::ScopedLock<PlatformMutex> lock(_mutex);
+
+    if(_initialized) {
+        return;
+    }
 
     // Wake the chip up using hardware pin, if available
     if(_wake_ctl != nullptr) {
@@ -78,9 +87,9 @@ void TCAN4551::init(void) {
     TCANDataTiming.DataTqAfterSamplePoint = 5;
 
     /* Configure the MCAN core settings */
-    cccr_config = {0};                     // Remember to initialize to 0, or you'll get random garbage!
-    cccr_config.FDOE = 0;                                            // CAN FD mode disable
-    cccr_config.BRSE = 0;                                            // CAN FD Bit rate switch disable
+    _cccr_config = {0};                     // Remember to initialize to 0, or you'll get random garbage!
+    _cccr_config.FDOE = 0;                                            // CAN FD mode disable
+    _cccr_config.BRSE = 0;                                            // CAN FD Bit rate switch disable
 
     /* Configure the default CAN packet filtering settings */
     TCAN4x5x_MCAN_Global_Filter_Configuration gfc = {0};
@@ -120,7 +129,7 @@ void TCAN4551::init(void) {
      * so it makes the most sense to do them all at once, so we only unlock and lock once                             */
 
     TCAN4x5x_MCAN_EnableProtectedRegisters(this);                       // Start by making protected registers accessible
-    TCAN4x5x_MCAN_ConfigureCCCRRegister(this, &cccr_config);             // Enable FD mode and Bit rate switching
+    TCAN4x5x_MCAN_ConfigureCCCRRegister(this, &_cccr_config);             // Enable FD mode and Bit rate switching
     TCAN4x5x_MCAN_ConfigureGlobalFilter(this, &gfc);                    // Configure the global filter configuration (Default CAN message behavior)
     TCAN4x5x_MCAN_ConfigureNominalTiming_Simple(this, &TCANNomTiming);  // Setup nominal/arbitration bit timing
     TCAN4x5x_MCAN_ConfigureDataTiming_Simple(this, &TCANDataTiming);    // Setup CAN FD timing
@@ -136,10 +145,9 @@ void TCAN4551::init(void) {
 
     TCAN4x5x_MCAN_ConfigureInterruptEnable(this, &mcan_ie);         // Enable the appropriate registers
 
-
     /* Setup standard filters */
     for(int i = 0; i < MBED_CONF_TCAN4551_SID_FILTER_COUNT; i++) {
-        TCAN4x5x_MCAN_SID_Filter* SID_ID = &filtered_buffers[i].sid_filter;
+        TCAN4x5x_MCAN_SID_Filter* SID_ID = &_filtered_buffers[i].sid_filter;
         *SID_ID = {0};
         SID_ID->SFT = TCAN4x5x_SID_SFT_CLASSIC;                      // SFT: Standard filter type. Configured as a classic filter
         SID_ID->SFEC = TCAN4x5x_SID_SFEC_DISABLED;                   // Standard filter element configuration, initially disabled
@@ -150,7 +158,7 @@ void TCAN4551::init(void) {
 
     /* Setup extended filters */
     for(int i = 0; i < MBED_CONF_TCAN4551_XID_FILTER_COUNT; i++) {
-        TCAN4x5x_MCAN_XID_Filter* XID_ID = &filtered_buffers[MBED_CONF_TCAN4551_SID_FILTER_COUNT+i].xid_filter;
+        TCAN4x5x_MCAN_XID_Filter* XID_ID = &_filtered_buffers[MBED_CONF_TCAN4551_SID_FILTER_COUNT+i].xid_filter;
         *XID_ID = {0};
         XID_ID->EFT = TCAN4x5x_XID_EFT_CLASSIC;                  // EFT
         XID_ID->EFEC = TCAN4x5x_XID_EFEC_DISABLED;               // EFEC, initially disabled
@@ -180,11 +188,32 @@ void TCAN4551::init(void) {
     TCAN4x5x_Device_SetMode(this, TCAN4x5x_DEVICE_MODE_NORMAL);         // Set to normal mode, since configuration is done. This line turns on the transceiver
 
     TCAN4x5x_MCAN_ClearInterruptsAll(this);                             // Resets all MCAN interrupts (does NOT include any SPIERR interrupts)
+
+    // Set up the interrupt input
+    this->_nint.fall(mbed::callback(this, &TCAN4551::_tcan_irq_handler));
+
+}
+
+
+void TCAN4551::sleep(void) {
+
+    /* Lazy initialization */
+    initialize_if();
+
+    mbed::ScopedLock<PlatformMutex> lock(_mutex);
+
+    TCAN4x5x_Device_SetMode(this, TCAN4x5x_DEVICE_MODE_SLEEP);
 }
 
 int TCAN4551::frequency(int hz) {
 
+    /* Lazy initialization */
+    initialize_if();
+
+    mbed::ScopedLock<PlatformMutex> lock(_mutex);
+
     // Assumes a 40MHz external clock (crystal or otherwise)
+    // TODO update this to be compatible with a different clock speed? (Configuration option)
 
     TCAN4x5x_MCAN_Nominal_Timing_Simple TCANNomTiming = {0};
     if(hz == 1000E3) {
@@ -220,33 +249,13 @@ int TCAN4551::frequency(int hz) {
     }
 }
 
-void TCAN4551::attach_irq_handler(can_irq_handler handler, uint32_t id) {
+int TCAN4551::write(mbed::CANMessage msg) {
 
-    this->irq_handler = handler;
-    this->id = id;
+    /* Lazy initialization */
+    initialize_if();
 
-    // Set up the interrupt input
-    this->nint.fall(mbed::callback(this, &TCAN4551::_tcan_irq_handler));
-}
+    mbed::ScopedLock<PlatformMutex> lock(_mutex);
 
-void TCAN4551::detach_irq_handler(void) {
-    this->irq_handler = NULL;
-    this->id = 0;
-
-    // Detach the interrupt input handler
-    this->nint.fall(nullptr);
-}
-
-void TCAN4551::enable_irq(CanIrqType type) {
-    // Set the enable bit in the IRQ mask
-    irq_mask |= (1 << (unsigned int) type);
-}
-
-void TCAN4551::disable_irq(CanIrqType type) {
-    irq_mask &= ~(1 << (unsigned int) type);
-}
-
-int TCAN4551::write(CAN_Message msg, int cc) {
     TCAN4x5x_MCAN_TX_Header header = {0};
     header.DLC  = (msg.len & 0xF);
     header.ID   = msg.id;
@@ -276,7 +285,13 @@ int TCAN4551::write(CAN_Message msg, int cc) {
     }
 }
 
-int TCAN4551::read(CAN_Message* msg, int handle) {
+int TCAN4551::read(mbed::CANMessage &msg, int handle) {
+
+    /* Lazy initialization */
+    initialize_if();
+
+    mbed::ScopedLock<PlatformMutex> lock(_mutex);
+
     TCAN4x5x_MCAN_Interrupts mcan_ir = {0};
     TCAN4x5x_MCAN_ReadInterrupts(this, &mcan_ir);
 
@@ -291,11 +306,11 @@ int TCAN4551::read(CAN_Message* msg, int handle) {
 
     // See if any of the filtered buffers have a new message for the desired filter
     if(handle != 0) {
-        filtered_buffer_t* buffer = &filtered_buffers[filter_handle_to_index(handle)];
+        filtered_buffer_t* buffer = &_filtered_buffers[filter_handle_to_index(handle)];
         if(buffer->new_data_available) {
             // New data has been stored in the local buffers, copy it over
-            copy_tcan_rx_header(msg, &buffer->rx_header);
-            memcpy(msg->data, buffer->data, buffer->rx_header.DLC);
+            copy_tcan_rx_header(&msg, &buffer->rx_header);
+            memcpy(msg.data, buffer->data, buffer->rx_header.DLC);
             buffer->new_data_available = false;
             return 1;
         } else {
@@ -311,8 +326,8 @@ int TCAN4551::read(CAN_Message* msg, int handle) {
                                   buffer->xid_filter.EFID1 : buffer->sid_filter.SFID1);
             if(filter_id == buffer->rx_header.ID) {
                 // Filter matches, copy it over and return it
-                copy_tcan_rx_header(msg, &buffer->rx_header);
-                memcpy(msg->data, buffer->data, num_bytes);
+                copy_tcan_rx_header(&msg, &buffer->rx_header);
+                memcpy(msg.data, buffer->data, num_bytes);
                 return 1;
             } else {
                 // Otherwise, we stored it in the temporary buffer so flag it
@@ -326,24 +341,74 @@ int TCAN4551::read(CAN_Message* msg, int handle) {
         TCAN4x5x_MCAN_RX_Header msg_header = {0};
         uint8_t num_bytes = 0;
 
-        num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO0, &msg_header, msg->data);
+        num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO0, &msg_header, msg.data);
 
         if(num_bytes == 0) {
             return 0; // No message received
         } else {
             // Copy over the header information
-            copy_tcan_rx_header(msg, &msg_header);
+            copy_tcan_rx_header(&msg, &msg_header);
             return 1;
         }
     }
 }
 
-int TCAN4551::mode(CanMode mode) {
+void TCAN4551::reset(void) {
+
+    mbed::ScopedLock<PlatformMutex> lock(_mutex);
+
+    // Use software reset if there's no dedicated RST output pin
+    if(_rst == nullptr) {
+        TCAN4x5x_DEV_CONFIG devConfig = {0};    // Remember to initialize to 0, or you'll get random garbage!
+        devConfig.DEVICE_RESET = 1;             // Request a software reset
+
+        // Issue the software reset
+        TCAN4x5x_Device_Configure(this, &devConfig);
+    } else {
+        _rst->write(1); // Pull reset high
+        wait_us(30);    // Wait t_PulseWidth (30us)
+        _rst->write(0); // Pull reset low again
+        wait_us(750);   // Wait >700us before communicating
+    }
+
+    _initialized = false;
+
+}
+
+void TCAN4551::monitor(bool silent) {
+
+    /* Lazy initialization */
+    initialize_if();
+
+    if(silent) {
+        // Enter monitoring mode
+        _cccr_config.MON = 1;
+    } else {
+        // Exit monitoring mode
+        _cccr_config.MON = 0;
+    }
+
+    // Start by making protected registers accessible
+    TCAN4x5x_MCAN_EnableProtectedRegisters(this);
+    // Change the config
+    TCAN4x5x_MCAN_ConfigureCCCRRegister(this, &_cccr_config);
+    // Disable access to protected registers
+    TCAN4x5x_MCAN_DisableProtectedRegisters(this);
+}
+
+int TCAN4551::mode(mbed::interface::can::Mode mode) {
+
+    /* Lazy initialization */
+    initialize_if();
+
     return 0; // TODO
 }
 
 int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         int handle) {
+
+    /* Lazy initialization */
+    initialize_if();
 
     if(format == CANStandard) {
 
@@ -364,7 +429,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         }
 
         // Get a pointer to the filter struct
-        handle_ptr = &filtered_buffers[filter_index].sid_filter;
+        handle_ptr = &_filtered_buffers[filter_index].sid_filter;
 
         // Configure the filter and write it to the controller
         handle_ptr->SFT = TCAN4x5x_SID_SFT_CLASSIC;
@@ -396,7 +461,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         }
 
         // Get a pointer to the filter struct
-        handle_ptr = &filtered_buffers[filter_index].xid_filter;
+        handle_ptr = &_filtered_buffers[filter_index].xid_filter;
 
         // Configure the filter and write it to the controller
         handle_ptr->EFT = TCAN4x5x_XID_EFT_CLASSIC;
@@ -410,42 +475,12 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
         // Invalid input
         return 0;
     }
-
 }
 
-void TCAN4551::reset(void) {
-
-    // Use software reset if there's no dedicated RST output pin
-    if(_rst == nullptr) {
-        TCAN4x5x_DEV_CONFIG devConfig = {0};    // Remember to initialize to 0, or you'll get random garbage!
-        devConfig.DEVICE_RESET = 1;             // Request a software reset
-
-        // Issue the software reset
-        TCAN4x5x_Device_Configure(this, &devConfig);
-    } else {
-        _rst->write(1); // Pull reset high
-        wait_us(30);    // Wait t_PulseWidth (30us)
-        _rst->write(0); // Pull reset low again
-        wait_us(750);   // Wait >700us before communicating
-    }
-
-}
-
-void TCAN4551::monitor(bool silent) {
-    if(silent) {
-        // Enter monitoring mode
-        cccr_config.MON = 1;
-    } else {
-        // Exit monitoring mode
-        cccr_config.MON = 0;
-    }
-
-    // Start by making protected registers accessible
-    TCAN4x5x_MCAN_EnableProtectedRegisters(this);
-    // Change the config
-    TCAN4x5x_MCAN_ConfigureCCCRRegister(this, &cccr_config);
-    // Disable access to protected registers
-    TCAN4x5x_MCAN_DisableProtectedRegisters(this);
+void TCAN4551::attach(mbed::Callback<void()> func, IrqType type) {
+    // TODO note - interrupts are not actually hooked up yet
+    mbed::ScopedLock<PlatformMutex> lock(_mutex);
+    _irq[type] = func;
 }
 
 void TCAN4551::apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing) {
@@ -460,10 +495,10 @@ void TCAN4551::apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing) 
 }
 
 void TCAN4551::_tcan_irq_handler(void) {
-    // Call the application handler if we have it
-    if(this->irq_handler != NULL) {
-//        this->irq_handler(this->id); // TODO - add interrupt type info
-    }
+
+    // TODO - go get interrupt flags and dispatch to application
+    // if(_irq[type]) { _irq[type](); }
+
 }
 
 void TCAN4551::copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* header) {
@@ -473,4 +508,4 @@ void TCAN4551::copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* he
     msg->type = CANData;
 }
 
-
+#endif /** DEVICE_SPI */
