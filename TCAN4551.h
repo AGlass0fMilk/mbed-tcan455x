@@ -142,6 +142,8 @@ public:
      *
      *  @param func A pointer to a void function, or 0 to set as none
      *  @param type Which CAN interrupt to attach the member function to (CAN::RxIrq for message received, CAN::TxIrq for transmitted or aborted, CAN::EwIrq for error warning, CAN::DoIrq for data overrun, CAN::WuIrq for wake-up, CAN::EpIrq for error passive, CAN::AlIrq for arbitration lost, CAN::BeIrq for bus error)
+     *
+     *  @note For the TCAN455x, the only one implemented is the RX IRQ
      */
     void attach(mbed::Callback<void()> func, IrqType type = IrqType::RxIrq) override;
 

@@ -478,7 +478,6 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
 }
 
 void TCAN4551::attach(mbed::Callback<void()> func, IrqType type) {
-    // TODO note - interrupts are not actually hooked up yet
     mbed::ScopedLock<PlatformMutex> lock(_mutex);
     _irq[type] = func;
 }
@@ -496,8 +495,25 @@ void TCAN4551::apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing) 
 
 void TCAN4551::_tcan_irq_handler(void) {
 
-    // TODO - go get interrupt flags and dispatch to application
-    // if(_irq[type]) { _irq[type](); }
+    tr_info("tcan irq handler called");
+
+    /**
+     * Since we can't access the SPI bus to read the interrupt source
+     * during an interrupt, we can only handle one type of IRQ...
+     *
+     * The RX IRQ is probably the most used so that's the one we provide
+     *
+     * The RX interrupt is the only one enabled in the TCAN's registers so
+     * the nINT pin should only be asserted when an RX interrupt occurs.
+     *
+     * TODO possible workaround would be if the driver is instantiated with
+     * an internally-created SPI bus (ie: not accessible to other application code,
+     * dedicated to the TCAN) then we can use a SPI subclass that removes the mutex protection
+     *
+     */
+    if(_irq[mbed::interface::can::IrqType::RxIrq]) {
+        _irq[mbed::interface::can::IrqType::RxIrq]();
+    }
 
 }
 
