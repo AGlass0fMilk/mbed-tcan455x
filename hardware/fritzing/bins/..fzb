@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<module fritzingVersion="0.5.2b.02.18.4756">
+ <title>.</title>
+ <instances>
+  <instance moduleIdRef="TCAN4551-BoB-R2B">
+   <views>
+    <iconView layer="icon">
+     <geometry y="-1" x="-1" z="-1"/>
+    </iconView>
+   </views>
+  </instance>
+ </instances>
+</module>

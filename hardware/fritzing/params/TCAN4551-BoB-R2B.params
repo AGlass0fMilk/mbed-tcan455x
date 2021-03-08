@@ -1,0 +1,197 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<board-params board='TCAN4551-BoB-R2B' include-vias='false' shrink-holes-factor='1.0' >
+<!-- please fill in the author, title, description, tags, and properties elements-->
+<author>gdbeckstein</author>
+<title></title>
+<url></url>
+<description></description>
+<tags>
+<!-- <tag>sample tag</tag> -->
+</tags>
+<properties>
+<!-- <property name='family'>sample family</property> -->
+</properties>
+<breadboard breadboard-color='#1F7A34'>
+<extra-layers>
+<!-- to add extra layers to the breadboard,
+uncomment the following <layer> elements,
+and change the 'number' attribute to the appropriate eagle layer number.
+You can add as many <layer> elements as you like -->
+<layer number='21' />
+<!-- <layer number='1' /> -->
+<!-- <layer number='29' /> -->
+</extra-layers>
+<includes>
+<!-- to include other svgs in the breadboard,
+uncomment the following <include> elements,
+and change the src and coordinates (coordinates without units are treated as 90 dpi px).
+You can add as many <include> elements as you like -->
+<!-- <include src='full path name to something.svg' x='0in' y='0in'/> -->
+</includes>
+<!-- Add 'nudges' to modify how packages and texts are displayed  -->
+<nudges>
+<!-- <nudge element='JP13' package='SFE-NEW-WEBLOGO' lines='no'/> -->
+<!-- <nudge element='JP20' package='SFE-NEW-WEBLOGO' show='no'/> -->
+<!-- <nudge element='JP17' package='1X08' x='-1.1mm' y='0.2mm' angle='90' gender='female' />  -->
+<!-- <nudge element='R1' text='330' x='2mm'><match y='2299' /></nudge>  -->
+</nudges>
+</breadboard>
+<connectors>
+<!-- Add 'rename' elements to modify how signals are named in fritzing  -->
+<renames> -->
+<!-- <rename signal='' to='lionel' package='MA06-1' element='FTDI' /> -->
+<!-- <rename signal='N$12' to='i dunno' package='MA06-1' element='FTDI' /> -->
+</renames>
+<power>
+<!-- left to right -->
+<connector signal='5V_OUT' id='57' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='3' type='pad'/>
+<connector signal='VDD_IO' id='62' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='8' type='pad'/>
+</power>
+<ground>
+<!-- left to right -->
+<connector signal='GND' id='37' package='DS1037-09MNAKT74-0CC' element='J1' name='3' type='pad'/>
+<connector signal='GND' id='44' package='DS1037-09MNAKT74-0CC' element='J1' name='10' type='pad'/>
+<connector signal='GND' id='45' package='DS1037-09MNAKT74-0CC' element='J1' name='11' type='pad'/>
+<connector signal='GND' id='59' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='5' type='pad'/>
+</ground>
+<left>
+<!-- top to bottom -->
+<connector signal='' id='35' package='DS1037-09MNAKT74-0CC' element='J1' name='1' type='pad'/>
+<connector signal='12V_IN' id='60' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='6' type='pad'/>
+<connector signal='' id='38' package='DS1037-09MNAKT74-0CC' element='J1' name='4' type='pad'/>
+<connector signal='' id='39' package='DS1037-09MNAKT74-0CC' element='J1' name='5' type='pad'/>
+<connector signal='' id='40' package='DS1037-09MNAKT74-0CC' element='J1' name='6' type='pad'/>
+<connector signal='' id='42' package='DS1037-09MNAKT74-0CC' element='J1' name='8' type='pad'/>
+<connector signal='' id='43' package='DS1037-09MNAKT74-0CC' element='J1' name='9' type='pad'/>
+<connector signal='CAN_!INT' id='53' package='HDR-1X9T/2.54/23X2' element='J2' name='8' type='pad'/>
+<connector signal='CAN_!WKRQ' id='47' package='HDR-1X9T/2.54/23X2' element='J2' name='2' type='pad'/>
+<connector signal='CAN_CLOCK_IN' id='46' package='HDR-1X9T/2.54/23X2' element='J2' name='1' type='pad'/>
+<connector signal='CAN_GPO1' id='48' package='HDR-1X9T/2.54/23X2' element='J2' name='3' type='pad'/>
+</left>
+<right>
+<!-- top to bottom -->
+<connector signal='CAN_WAKE' id='58' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='4' type='pad'/>
+<connector signal='CAN_RST' id='63' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='9' type='pad'/>
+<connector signal='CAN_P' id='41' package='DS1037-09MNAKT74-0CC' element='J1' name='7' type='pad'/>
+<connector signal='CAN_P' id='56' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='2' type='pad'/>
+<connector signal='CAN_N' id='36' package='DS1037-09MNAKT74-0CC' element='J1' name='2' type='pad'/>
+<connector signal='CAN_N' id='55' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='1' type='pad'/>
+<connector signal='CAN_INH' id='61' package='HDR-1X9T/2.54/23X2_J3' element='J3' name='7' type='pad'/>
+<connector signal='CAN_IF_SCLK' id='49' package='HDR-1X9T/2.54/23X2' element='J2' name='4' type='pad'/>
+<connector signal='CAN_IF_MOSI' id='50' package='HDR-1X9T/2.54/23X2' element='J2' name='5' type='pad'/>
+<connector signal='CAN_IF_MISO' id='51' package='HDR-1X9T/2.54/23X2' element='J2' name='6' type='pad'/>
+<connector signal='CAN_IF_!CS' id='52' package='HDR-1X9T/2.54/23X2' element='J2' name='7' type='pad'/>
+<connector signal='CAN_GPO2' id='54' package='HDR-1X9T/2.54/23X2' element='J2' name='9' type='pad'/>
+</right>
+<unused>
+<connector signal='CAN_WAKE_HV' id='0' package='CAP_0603_L' element='C1' name='1' type='smd'/>
+<connector signal='GND' id='1' package='CAP_0603_L' element='C1' name='2' type='smd'/>
+<connector signal='VDD_IO' id='2' package='CAP_0603_L_C2' element='C2' name='1' type='smd'/>
+<connector signal='GND' id='3' package='CAP_0603_L_C2' element='C2' name='2' type='smd'/>
+<connector signal='VDD_IO' id='4' package='CAP_1206_L' element='C3' name='1' type='smd'/>
+<connector signal='GND' id='5' package='CAP_1206_L' element='C3' name='2' type='smd'/>
+<connector signal='12V_IN' id='6' package='CAP_1206_L' element='C4' name='1' type='smd'/>
+<connector signal='GND' id='7' package='CAP_1206_L' element='C4' name='2' type='smd'/>
+<connector signal='5V_OUT' id='8' package='CAP_1206_L_C5' element='C5' name='1' type='smd'/>
+<connector signal='GND' id='9' package='CAP_1206_L_C5' element='C5' name='2' type='smd'/>
+<connector signal='CAN_LDO_FLTR' id='10' package='CAP_0603_L_C6' element='C6' name='1' type='smd'/>
+<connector signal='GND' id='11' package='CAP_0603_L_C6' element='C6' name='2' type='smd'/>
+<connector signal='12V_IN' id='12' package='CAP_0603_L_C7' element='C7' name='1' type='smd'/>
+<connector signal='GND' id='13' package='CAP_0603_L_C7' element='C7' name='2' type='smd'/>
+<connector signal='CAN_RST' id='14' package='CAP_0603_L_C7' element='C8' name='1' type='smd'/>
+<connector signal='RST_PU' id='15' package='CAP_0603_L_C7' element='C8' name='2' type='smd'/>
+<connector signal='CAN_P' id='16' package='RES_0603_L' element='C9' name='1' type='smd'/>
+<connector signal='GND' id='17' package='RES_0603_L' element='C9' name='2' type='smd'/>
+<connector signal='CAN_N' id='18' package='RES_0603_L_C10' element='C10' name='1' type='smd'/>
+<connector signal='GND' id='19' package='RES_0603_L_C10' element='C10' name='2' type='smd'/>
+<connector signal='CAN_SPLIT_TERM' id='20' package='CAP_0603_L' element='C11' name='1' type='smd'/>
+<connector signal='GND' id='21' package='CAP_0603_L' element='C11' name='2' type='smd'/>
+<connector signal='CAN_OSC_OUT' id='22' package='CAP_0402_L' element='C12' name='1' type='smd'/>
+<connector signal='GND' id='23' package='CAP_0402_L' element='C12' name='2' type='smd'/>
+<connector signal='CAN_OSC_IN' id='24' package='CAP_0402_L_C13' element='C13' name='1' type='smd'/>
+<connector signal='GND' id='25' package='CAP_0402_L_C13' element='C13' name='2' type='smd'/>
+<connector signal='12V_IN' id='26' package='LED-0603' element='D1' name='A' type='smd'/>
+<connector signal='RED_C' id='27' package='LED-0603' element='D1' name='C' type='smd'/>
+<connector signal='5V_OUT' id='28' package='LED-0603_D2' element='D2' name='A' type='smd'/>
+<connector signal='GREEN_C' id='29' package='LED-0603_D2' element='D2' name='C' type='smd'/>
+<connector signal='VDD_IO' id='30' package='LED-0603_D2' element='D3' name='A' type='smd'/>
+<connector signal='BLUE_C' id='31' package='LED-0603_D2' element='D3' name='C' type='smd'/>
+<connector signal='GND' id='32' package='SOT23V2' element='D4' name='1' type='smd'/>
+<connector signal='CAN_P' id='33' package='SOT23V2' element='D4' name='2' type='smd'/>
+<connector signal='CAN_N' id='34' package='SOT23V2' element='D4' name='3' type='smd'/>
+<connector signal='CAN_H_OPT_TERM' id='64' package='SMT-JUMPER_2_NC_TRACE_SILK' element='J4' name='1' type='smd'/>
+<connector signal='CAN_P' id='65' package='SMT-JUMPER_2_NC_TRACE_SILK' element='J4' name='2' type='smd'/>
+<connector signal='CAN_L_OPT_TERM' id='66' package='SMT-JUMPER_2_NC_TRACE_SILK_J5' element='J5' name='1' type='smd'/>
+<connector signal='CAN_N' id='67' package='SMT-JUMPER_2_NC_TRACE_SILK_J5' element='J5' name='2' type='smd'/>
+<connector signal='CAN_CLOCK_IN' id='68' package='SMT-JUMPER_3_1-NC_TRACE_SILK' element='J6' name='1' type='smd'/>
+<connector signal='CAN_OSC1' id='69' package='SMT-JUMPER_3_1-NC_TRACE_SILK' element='J6' name='2' type='smd'/>
+<connector signal='CAN_OSC_IN' id='70' package='SMT-JUMPER_3_1-NC_TRACE_SILK' element='J6' name='3' type='smd'/>
+<connector signal='GND' id='71' package='SMT-JUMPER_3_1-NC_TRACE_SILK_J7' element='J7' name='1' type='smd'/>
+<connector signal='CAN_OSC2' id='72' package='SMT-JUMPER_3_1-NC_TRACE_SILK_J7' element='J7' name='2' type='smd'/>
+<connector signal='CAN_OSC_OUT' id='73' package='SMT-JUMPER_3_1-NC_TRACE_SILK_J7' element='J7' name='3' type='smd'/>
+<connector signal='12V_IN' id='74' package='RES_0603_L_R1' element='R1' name='1' type='smd'/>
+<connector signal='CAN_WAKE_HV' id='75' package='RES_0603_L_R1' element='R1' name='2' type='smd'/>
+<connector signal='CAN_WAKE_HV' id='76' package='RES_0603_L_R1' element='R2' name='1' type='smd'/>
+<connector signal='CAN_WAKE' id='77' package='RES_0603_L_R1' element='R2' name='2' type='smd'/>
+<connector signal='GND' id='78' package='RES_0805_L' element='R3' name='1' type='smd'/>
+<connector signal='RED_C' id='79' package='RES_0805_L' element='R3' name='2' type='smd'/>
+<connector signal='GND' id='80' package='RES_0402_L' element='R4' name='1' type='smd'/>
+<connector signal='GREEN_C' id='81' package='RES_0402_L' element='R4' name='2' type='smd'/>
+<connector signal='GND' id='82' package='RES_0402_L' element='R5' name='1' type='smd'/>
+<connector signal='BLUE_C' id='83' package='RES_0402_L' element='R5' name='2' type='smd'/>
+<connector signal='VDD_IO' id='84' package='RES_0402_L_R6' element='R6' name='1' type='smd'/>
+<connector signal='CAN_!WKRQ' id='85' package='RES_0402_L_R6' element='R6' name='2' type='smd'/>
+<connector signal='VDD_IO' id='86' package='RES_0402_L_R7' element='R7' name='1' type='smd'/>
+<connector signal='CAN_GPO2' id='87' package='RES_0402_L_R7' element='R7' name='2' type='smd'/>
+<connector signal='VDD_IO' id='88' package='RES_0402_L_R8' element='R8' name='1' type='smd'/>
+<connector signal='CAN_!INT' id='89' package='RES_0402_L_R8' element='R8' name='2' type='smd'/>
+<connector signal='VDD_IO' id='90' package='RES_0402_L_R7' element='R9' name='1' type='smd'/>
+<connector signal='RST_PU' id='91' package='RES_0402_L_R7' element='R9' name='2' type='smd'/>
+<connector signal='CAN_SPLIT_TERM' id='92' package='RES_0805_L_R10' element='R10' name='1' type='smd'/>
+<connector signal='CAN_H_OPT_TERM' id='93' package='RES_0805_L_R10' element='R10' name='2' type='smd'/>
+<connector signal='CAN_SPLIT_TERM' id='94' package='RES_0805_L' element='R11' name='1' type='smd'/>
+<connector signal='CAN_L_OPT_TERM' id='95' package='RES_0805_L' element='R11' name='2' type='smd'/>
+<connector signal='CAN_WAKE_HV' id='96' package='TS-1088-AR02016' element='S1' name='1' type='smd'/>
+<connector signal='GND' id='97' package='TS-1088-AR02016' element='S1' name='2' type='smd'/>
+<connector signal='RST_PU' id='98' package='TS-1088-AR02016' element='S2' name='1' type='smd'/>
+<connector signal='CAN_RST' id='99' package='TS-1088-AR02016' element='S2' name='2' type='smd'/>
+<connector signal='CAN_OSC1' id='100' package='RQFN-20/3.5X4.5X0.5' element='U1' name='1' type='smd'/>
+<connector signal='CAN_!WKRQ' id='101' package='RQFN-20/3.5X4.5X0.5' element='U1' name='2' type='smd'/>
+<connector signal='CAN_GPO1' id='102' package='RQFN-20/3.5X4.5X0.5' element='U1' name='3' type='smd'/>
+<connector signal='CAN_IF_SCLK' id='103' package='RQFN-20/3.5X4.5X0.5' element='U1' name='4' type='smd'/>
+<connector signal='CAN_IF_MOSI' id='104' package='RQFN-20/3.5X4.5X0.5' element='U1' name='5' type='smd'/>
+<connector signal='CAN_IF_MISO' id='105' package='RQFN-20/3.5X4.5X0.5' element='U1' name='6' type='smd'/>
+<connector signal='CAN_IF_!CS' id='106' package='RQFN-20/3.5X4.5X0.5' element='U1' name='7' type='smd'/>
+<connector signal='CAN_!INT' id='107' package='RQFN-20/3.5X4.5X0.5' element='U1' name='8' type='smd'/>
+<connector signal='CAN_GPO2' id='108' package='RQFN-20/3.5X4.5X0.5' element='U1' name='9' type='smd'/>
+<connector signal='CAN_N' id='109' package='RQFN-20/3.5X4.5X0.5' element='U1' name='10' type='smd'/>
+<connector signal='CAN_P' id='110' package='RQFN-20/3.5X4.5X0.5' element='U1' name='11' type='smd'/>
+<connector signal='CAN_WAKE' id='111' package='RQFN-20/3.5X4.5X0.5' element='U1' name='12' type='smd'/>
+<connector signal='GND' id='112' package='RQFN-20/3.5X4.5X0.5' element='U1' name='13' type='smd'/>
+<connector signal='12V_IN' id='113' package='RQFN-20/3.5X4.5X0.5' element='U1' name='14' type='smd'/>
+<connector signal='CAN_INH' id='114' package='RQFN-20/3.5X4.5X0.5' element='U1' name='15' type='smd'/>
+<connector signal='5V_OUT' id='115' package='RQFN-20/3.5X4.5X0.5' element='U1' name='16' type='smd'/>
+<connector signal='VDD_IO' id='116' package='RQFN-20/3.5X4.5X0.5' element='U1' name='17' type='smd'/>
+<connector signal='CAN_LDO_FLTR' id='117' package='RQFN-20/3.5X4.5X0.5' element='U1' name='18' type='smd'/>
+<connector signal='CAN_RST' id='118' package='RQFN-20/3.5X4.5X0.5' element='U1' name='19' type='smd'/>
+<connector signal='CAN_OSC2' id='119' package='RQFN-20/3.5X4.5X0.5' element='U1' name='20' type='smd'/>
+<connector signal='GND' id='120' package='RQFN-20/3.5X4.5X0.5' element='U1' name='21' type='smd'/>
+<connector signal='CAN_OSC_IN' id='121' package='TXM40M0004252HBCEO00T' element='Y1' name='1' type='smd'/>
+<connector signal='GND' id='122' package='TXM40M0004252HBCEO00T' element='Y1' name='2' type='smd'/>
+<connector signal='CAN_OSC_OUT' id='123' package='TXM40M0004252HBCEO00T' element='Y1' name='3' type='smd'/>
+<connector signal='GND' id='124' package='TXM40M0004252HBCEO00T' element='Y1' name='4' type='smd'/>
+</unused>
+</connectors>
+<!-- Add fake-via connectors to change pads to vias for hybrid parts  -->
+<!-- <fake-vias>  -->
+<!--		<connector signal='' id='173' package='1X3_STRIP' element='U$10' name='2' type='pad'/> -->
+<!-- </fake-vias> -->
+<!-- Add buses to connect connectors that don't have matching signal names  -->
+<!-- <buses>  -->
+<!--		<bus>  -->
+<!--			<connector signal='' id='173' package='1X3_STRIP' element='U$10' name='2' type='pad'/>  -->
+<!--			<connector signal='' id='174' package='1X3_STRIP' element='U$10' name='3' type='pad'/>  -->
+<!--			<via signal='N$84' />  -->
+<!--		</bus>  -->
+<!-- </buses>  -->
+</board-params>

@@ -1,0 +1,344 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<module fritzingVersion='0.5.2b.02.18.4756' moduleId='TCAN4551-BoB-R2B'>
+<version>4</version>
+<date>2021-03-08</date>
+<author>gdbeckstein</author>
+<description></description>
+<title>TCAN4551-BoB-R2B</title>
+<tags>
+</tags>
+<properties>
+</properties>
+<views>
+<breadboardView>
+<layers image='breadboard/TCAN4551-BoB-R2B_breadboard.svg'>
+<layer layerId='breadboard'/>
+</layers>
+</breadboardView>
+<schematicView>
+<layers image='schematic/TCAN4551-BoB-R2B_schematic.svg'>
+<layer layerId='schematic'/>
+</layers>
+</schematicView>
+<pcbView>
+<layers image='pcb/TCAN4551-BoB-R2B_pcb.svg'>
+<layer layerId='copper1'/>
+<layer layerId='silkscreen'/>
+<layer layerId='copper0'/>
+</layers>
+</pcbView>
+<iconView>
+<layers image='breadboard/TCAN4551-BoB-R2B_breadboard.svg'>
+<layer layerId='icon'/>
+</layers>
+</iconView>
+</views>
+<connectors>
+<connector id='connector35' type='female' name='1'>
+<description>1</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector35pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector35pin' terminalId='connector35terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector35pad'/><p layer='copper1' svgId='connector35pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector36' type='female' name='CAN_N'>
+<description>CAN_N</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector36pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector36pin' terminalId='connector36terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector36pad'/><p layer='copper1' svgId='connector36pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector37' type='female' name='GND'>
+<description>GND</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector37pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector37pin' terminalId='connector37terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector37pad'/><p layer='copper1' svgId='connector37pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector38' type='female' name='4'>
+<description>4</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector38pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector38pin' terminalId='connector38terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector38pad'/><p layer='copper1' svgId='connector38pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector39' type='female' name='5'>
+<description>5</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector39pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector39pin' terminalId='connector39terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector39pad'/><p layer='copper1' svgId='connector39pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector40' type='female' name='6'>
+<description>6</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector40pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector40pin' terminalId='connector40terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector40pad'/><p layer='copper1' svgId='connector40pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector41' type='female' name='CAN_P'>
+<description>CAN_P</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector41pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector41pin' terminalId='connector41terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector41pad'/><p layer='copper1' svgId='connector41pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector42' type='female' name='8'>
+<description>8</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector42pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector42pin' terminalId='connector42terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector42pad'/><p layer='copper1' svgId='connector42pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector43' type='female' name='9'>
+<description>9</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector43pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector43pin' terminalId='connector43terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector43pad'/><p layer='copper1' svgId='connector43pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector44' type='female' name='GND'>
+<description>GND</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector44pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector44pin' terminalId='connector44terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector44pad'/><p layer='copper1' svgId='connector44pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector45' type='female' name='GND'>
+<description>GND</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector45pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector45pin' terminalId='connector45terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector45pad'/><p layer='copper1' svgId='connector45pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector46' type='female' name='CAN_CLOCK_IN'>
+<description>CAN_CLOCK_IN</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector46pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector46pin' terminalId='connector46terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector46pad'/><p layer='copper1' svgId='connector46pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector47' type='female' name='CAN_!WKRQ'>
+<description>CAN_!WKRQ</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector47pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector47pin' terminalId='connector47terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector47pad'/><p layer='copper1' svgId='connector47pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector48' type='female' name='CAN_GPO1'>
+<description>CAN_GPO1</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector48pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector48pin' terminalId='connector48terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector48pad'/><p layer='copper1' svgId='connector48pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector49' type='female' name='CAN_IF_SCLK'>
+<description>CAN_IF_SCLK</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector49pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector49pin' terminalId='connector49terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector49pad'/><p layer='copper1' svgId='connector49pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector50' type='female' name='CAN_IF_MOSI'>
+<description>CAN_IF_MOSI</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector50pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector50pin' terminalId='connector50terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector50pad'/><p layer='copper1' svgId='connector50pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector51' type='female' name='CAN_IF_MISO'>
+<description>CAN_IF_MISO</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector51pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector51pin' terminalId='connector51terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector51pad'/><p layer='copper1' svgId='connector51pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector52' type='female' name='CAN_IF_!CS'>
+<description>CAN_IF_!CS</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector52pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector52pin' terminalId='connector52terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector52pad'/><p layer='copper1' svgId='connector52pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector53' type='female' name='CAN_!INT'>
+<description>CAN_!INT</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector53pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector53pin' terminalId='connector53terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector53pad'/><p layer='copper1' svgId='connector53pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector54' type='female' name='CAN_GPO2'>
+<description>CAN_GPO2</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector54pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector54pin' terminalId='connector54terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector54pad'/><p layer='copper1' svgId='connector54pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector55' type='female' name='CAN_N'>
+<description>CAN_N</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector55pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector55pin' terminalId='connector55terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector55pad'/><p layer='copper1' svgId='connector55pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector56' type='female' name='CAN_P'>
+<description>CAN_P</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector56pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector56pin' terminalId='connector56terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector56pad'/><p layer='copper1' svgId='connector56pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector57' type='female' name='5V_OUT'>
+<description>5V_OUT</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector57pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector57pin' terminalId='connector57terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector57pad'/><p layer='copper1' svgId='connector57pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector58' type='female' name='CAN_WAKE'>
+<description>CAN_WAKE</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector58pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector58pin' terminalId='connector58terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector58pad'/><p layer='copper1' svgId='connector58pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector59' type='female' name='GND'>
+<description>GND</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector59pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector59pin' terminalId='connector59terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector59pad'/><p layer='copper1' svgId='connector59pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector60' type='female' name='12V_IN'>
+<description>12V_IN</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector60pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector60pin' terminalId='connector60terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector60pad'/><p layer='copper1' svgId='connector60pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector61' type='female' name='CAN_INH'>
+<description>CAN_INH</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector61pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector61pin' terminalId='connector61terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector61pad'/><p layer='copper1' svgId='connector61pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector62' type='female' name='VDD_IO'>
+<description>VDD_IO</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector62pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector62pin' terminalId='connector62terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector62pad'/><p layer='copper1' svgId='connector62pad'/></pcbView>
+</views>
+</connector>
+<connector id='connector63' type='female' name='CAN_RST'>
+<description>CAN_RST</description><views>
+<breadboardView>
+<p layer='breadboard' svgId='connector63pin'/></breadboardView>
+<schematicView>
+<p layer='schematic' svgId='connector63pin' terminalId='connector63terminal'/></schematicView>
+<pcbView>
+<p layer='copper0' svgId='connector63pad'/><p layer='copper1' svgId='connector63pad'/></pcbView>
+</views>
+</connector>
+</connectors>
+<buses>
+<bus id='gnd'>
+<nodeMember connectorId='connector37'/>
+<nodeMember connectorId='connector44'/>
+<nodeMember connectorId='connector45'/>
+<nodeMember connectorId='connector59'/>
+</bus>
+<bus id='can_n'>
+<nodeMember connectorId='connector36'/>
+<nodeMember connectorId='connector55'/>
+</bus>
+<bus id='can_p'>
+<nodeMember connectorId='connector41'/>
+<nodeMember connectorId='connector56'/>
+</bus>
+</buses>
+</module>
