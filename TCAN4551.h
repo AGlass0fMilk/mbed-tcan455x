@@ -103,7 +103,7 @@ public:
      */
     void sleep(void);
 
-    /** InterfaceCAN overrides */
+    /** interface::CAN overrides */
 
     /**
      * Sets the frequency of the CAN transmission

@@ -15,6 +15,8 @@
 #ifndef TCAN4X5X_SPI_H_
 #define TCAN4X5X_SPI_H_
 
+#if DEVICE_SPI && FEATURE_EXPERIMENTAL_API
+
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -52,6 +54,8 @@ void tcan_spi_read_burst_end(tcan_handle_t handle);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 #endif

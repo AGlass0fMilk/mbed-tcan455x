@@ -1,5 +1,5 @@
 /*
- * TCAN4x5x_SPI.c
+ * TCAN4x5x_SPI.cpp
  * Description: This file is responsible for abstracting the lower-level microcontroller SPI read and write functions
  *
  * Created on: Feb 10, 2020
@@ -7,7 +7,7 @@
  *
  */
 
-#if DEVICE_SPI
+#if DEVICE_SPI && FEATURE_EXPERIMENTAL_API
 
 #include "TCAN4x5x_SPI.h"
 
@@ -166,4 +166,4 @@ extern "C" {
     }
 }
 
-#endif /* DEVICE_SPI */
+#endif

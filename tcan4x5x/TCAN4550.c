@@ -62,6 +62,7 @@
 
 #include "TCAN4550.h"
 
+#if DEVICE_SPI && FEATURE_EXPERIMENTAL_API
 
 #ifdef TCAN4x5x_MCAN_CACHE_CONFIGURATION
 // If caching is enabled, define the necessary variables
@@ -1931,3 +1932,5 @@ TCAN4x5x_WDT_Reset(tcan_handle_t handle)
     writeValue |= REG_BITS_DEVICE_MODE_WDT_RESET_BIT;
     tcan_spi_write_32(handle, REG_DEV_MODES_AND_PINS, writeValue);		// Reset the watch dog timer
 }
+
+#endif
