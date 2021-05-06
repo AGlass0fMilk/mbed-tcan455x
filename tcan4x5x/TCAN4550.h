@@ -39,6 +39,8 @@
 #ifndef TCAN4550_H_
 #define TCAN4550_H_
 
+#if DEVICE_SPI && FEATURE_EXPERIMENTAL_API
+
 #include "TCAN4x5x_SPI.h"
 #include "TCAN4x5x_Reg.h"
 #include "TCAN4x5x_Data_Structs.h"
@@ -142,6 +144,8 @@ extern void TCAN4x5x_WDT_Reset(tcan_handle_t handle);
 
 #ifdef __cplusplus
 }
+#endif
+
 #endif
 
 #endif
