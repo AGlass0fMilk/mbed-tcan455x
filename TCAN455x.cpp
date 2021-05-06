@@ -17,7 +17,7 @@
 
 #if DEVICE_SPI && FEATURE_EXPERIMENTAL_API
 
-#include "TCAN4551.h"
+#include "TCAN455x.h"
 
 #include "TCAN4550.h" /** TI driver header file */
 
@@ -30,20 +30,20 @@
 
 #define TRACE_GROUP "tcan"
 
-TCAN4551::TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
+TCAN455x::TCAN455x(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
         mbed::DigitalOut* rst, mbed::DigitalOut* wake_ctl) : _spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), _nint(nint_pin, PullUp),
         _rst(rst), _wake_ctl(wake_ctl), _read_errors(0), _write_errors(0),
         _standard_id_index(0), _extended_id_index(0)
 {
-    for(int i = 0; i < TCAN4551_TOTAL_FILTER_COUNT; i++) {
+    for(int i = 0; i < TCAN455X_TOTAL_FILTER_COUNT; i++) {
         memset(&_filtered_buffers[i], 0, sizeof(filtered_buffer_t));
     }
 }
 
-TCAN4551::~TCAN4551() {
+TCAN455x::~TCAN455x() {
 }
 
-void TCAN4551::init(void) {
+void TCAN455x::init(void) {
 
     mbed::ScopedLock<PlatformMutex> lock(_mutex);
 
@@ -100,8 +100,8 @@ void TCAN4551::init(void) {
 
     /* ************************************************************************
      * In the next configuration block, we will set the MCAN core up to have:
-     *   - 3 SID filter elements (default, configurable with MBED_CONF_TCAN4551_SID_FILTER_COUNT)
-     *   - 3 XID Filter elements (default, configurable with MBED_CONF_TCAN4551_XID_FILTER_COUNT)
+     *   - 3 SID filter elements (default, configurable with MBED_CONF_TCAN455X_SID_FILTER_COUNT)
+     *   - 3 XID Filter elements (default, configurable with MBED_CONF_TCAN455X_XID_FILTER_COUNT)
      *   - 5 RX FIFO 0 elements
      *   - RX FIFO 0 is where unfiltered packets go
      *   - RX FIFO 1 is where filtered messages go
@@ -112,8 +112,8 @@ void TCAN4551::init(void) {
 
     // TODO - will need to increase the element size for CAN-FD
     TCAN4x5x_MRAM_Config MRAMConfiguration = {0};
-    MRAMConfiguration.SIDNumElements = MBED_CONF_TCAN4551_SID_FILTER_COUNT; // Standard ID number of elements, you MUST have a filter written to MRAM for each element defined
-    MRAMConfiguration.XIDNumElements = MBED_CONF_TCAN4551_XID_FILTER_COUNT; // Extended ID number of elements, you MUST have a filter written to MRAM for each element defined
+    MRAMConfiguration.SIDNumElements = MBED_CONF_TCAN455X_SID_FILTER_COUNT; // Standard ID number of elements, you MUST have a filter written to MRAM for each element defined
+    MRAMConfiguration.XIDNumElements = MBED_CONF_TCAN455X_XID_FILTER_COUNT; // Extended ID number of elements, you MUST have a filter written to MRAM for each element defined
     MRAMConfiguration.Rx0NumElements = 5;                       // RX0 Number of elements
     MRAMConfiguration.Rx0ElementSize = MRAM_8_Byte_Data;        // RX0 data payload size
     MRAMConfiguration.Rx1NumElements = 5;                       // RX1 number of elements
@@ -146,7 +146,7 @@ void TCAN4551::init(void) {
     TCAN4x5x_MCAN_ConfigureInterruptEnable(this, &mcan_ie);         // Enable the appropriate registers
 
     /* Setup standard filters */
-    for(int i = 0; i < MBED_CONF_TCAN4551_SID_FILTER_COUNT; i++) {
+    for(int i = 0; i < MBED_CONF_TCAN455X_SID_FILTER_COUNT; i++) {
         TCAN4x5x_MCAN_SID_Filter* SID_ID = &_filtered_buffers[i].sid_filter;
         *SID_ID = {0};
         SID_ID->SFT = TCAN4x5x_SID_SFT_CLASSIC;                      // SFT: Standard filter type. Configured as a classic filter
@@ -157,8 +157,8 @@ void TCAN4551::init(void) {
     }
 
     /* Setup extended filters */
-    for(int i = 0; i < MBED_CONF_TCAN4551_XID_FILTER_COUNT; i++) {
-        TCAN4x5x_MCAN_XID_Filter* XID_ID = &_filtered_buffers[MBED_CONF_TCAN4551_SID_FILTER_COUNT+i].xid_filter;
+    for(int i = 0; i < MBED_CONF_TCAN455X_XID_FILTER_COUNT; i++) {
+        TCAN4x5x_MCAN_XID_Filter* XID_ID = &_filtered_buffers[MBED_CONF_TCAN455X_SID_FILTER_COUNT+i].xid_filter;
         *XID_ID = {0};
         XID_ID->EFT = TCAN4x5x_XID_EFT_CLASSIC;                  // EFT
         XID_ID->EFEC = TCAN4x5x_XID_EFEC_DISABLED;               // EFEC, initially disabled
@@ -190,12 +190,12 @@ void TCAN4551::init(void) {
     TCAN4x5x_MCAN_ClearInterruptsAll(this);                             // Resets all MCAN interrupts (does NOT include any SPIERR interrupts)
 
     // Set up the interrupt input
-    this->_nint.fall(mbed::callback(this, &TCAN4551::_tcan_irq_handler));
+    this->_nint.fall(mbed::callback(this, &TCAN455x::_tcan_irq_handler));
 
 }
 
 
-void TCAN4551::sleep(void) {
+void TCAN455x::sleep(void) {
 
     /* Lazy initialization */
     initialize_if();
@@ -205,7 +205,7 @@ void TCAN4551::sleep(void) {
     TCAN4x5x_Device_SetMode(this, TCAN4x5x_DEVICE_MODE_SLEEP);
 }
 
-int TCAN4551::frequency(int hz) {
+int TCAN455x::frequency(int hz) {
 
     /* Lazy initialization */
     initialize_if();
@@ -249,7 +249,7 @@ int TCAN4551::frequency(int hz) {
     }
 }
 
-int TCAN4551::write(mbed::CANMessage msg) {
+int TCAN455x::write(mbed::CANMessage msg) {
 
     /* Lazy initialization */
     initialize_if();
@@ -285,7 +285,7 @@ int TCAN4551::write(mbed::CANMessage msg) {
     }
 }
 
-int TCAN4551::read(mbed::CANMessage &msg, int handle) {
+int TCAN455x::read(mbed::CANMessage &msg, int handle) {
 
     /* Lazy initialization */
     initialize_if();
@@ -353,7 +353,7 @@ int TCAN4551::read(mbed::CANMessage &msg, int handle) {
     }
 }
 
-void TCAN4551::reset(void) {
+void TCAN455x::reset(void) {
 
     mbed::ScopedLock<PlatformMutex> lock(_mutex);
 
@@ -375,7 +375,7 @@ void TCAN4551::reset(void) {
 
 }
 
-void TCAN4551::monitor(bool silent) {
+void TCAN455x::monitor(bool silent) {
 
     /* Lazy initialization */
     initialize_if();
@@ -396,7 +396,7 @@ void TCAN4551::monitor(bool silent) {
     TCAN4x5x_MCAN_DisableProtectedRegisters(this);
 }
 
-int TCAN4551::mode(mbed::interface::can::Mode mode) {
+int TCAN455x::mode(mbed::interface::can::Mode mode) {
 
     /* Lazy initialization */
     initialize_if();
@@ -404,7 +404,7 @@ int TCAN4551::mode(mbed::interface::can::Mode mode) {
     return 0; // TODO
 }
 
-int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
+int TCAN455x::filter(unsigned int id, unsigned int mask, CANFormat format,
         int handle) {
 
     /* Lazy initialization */
@@ -413,7 +413,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
     if(format == CANStandard) {
 
         // Disallow accessing a filter handle beyond what's available
-        if(handle < 0 || handle >= MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
+        if(handle < 0 || handle >= MBED_CONF_TCAN455X_SID_FILTER_COUNT) {
             return 0;
         }
 
@@ -444,7 +444,7 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
 
         // Disallow accessing a filter handle beyond what's available
         if(handle != 0) {
-            if(handle < MBED_CONF_TCAN4551_SID_FILTER_COUNT || handle >= TCAN4551_TOTAL_FILTER_COUNT) {
+            if(handle < MBED_CONF_TCAN455X_SID_FILTER_COUNT || handle >= TCAN455X_TOTAL_FILTER_COUNT) {
                 return 0;
             }
         }
@@ -477,12 +477,12 @@ int TCAN4551::filter(unsigned int id, unsigned int mask, CANFormat format,
     }
 }
 
-void TCAN4551::attach(mbed::Callback<void()> func, IrqType type) {
+void TCAN455x::attach(mbed::Callback<void()> func, IrqType type) {
     mbed::ScopedLock<PlatformMutex> lock(_mutex);
     _irq[type] = func;
 }
 
-void TCAN4551::apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing) {
+void TCAN455x::apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing) {
 
     // Start by making protected registers accessible
     TCAN4x5x_MCAN_EnableProtectedRegisters(this);
@@ -493,7 +493,7 @@ void TCAN4551::apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing) 
 
 }
 
-void TCAN4551::_tcan_irq_handler(void) {
+void TCAN455x::_tcan_irq_handler(void) {
 
     tr_info("tcan irq handler called");
 
@@ -517,7 +517,7 @@ void TCAN4551::_tcan_irq_handler(void) {
 
 }
 
-void TCAN4551::copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* header) {
+void TCAN455x::copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* header) {
     msg->id = header->ID;
     msg->len = header->DLC;
     msg->format = (header->XTD? CANExtended : CANStandard);

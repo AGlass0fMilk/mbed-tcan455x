@@ -11,9 +11,9 @@
 
 #include "TCAN4x5x_SPI.h"
 
-#include "TCAN4551.h"
+#include "TCAN455x.h"
 
-mbed::SPI &get_spi_handle(TCAN4551 *ptr) {
+mbed::SPI &get_spi_handle(TCAN455x *ptr) {
     return ptr->_spi;
 }
 
@@ -71,7 +71,7 @@ extern "C" {
         header |= (address & 0xFF00);
         header |= AHB_WRITE_OPCODE;
 
-        mbed::SPI& spi = get_spi_handle((TCAN4551*)handle);
+        mbed::SPI& spi = get_spi_handle((TCAN455x*)handle);
         spi.select();
 
         spi.write((const char*) &header, 4, NULL, 0);
@@ -90,7 +90,7 @@ extern "C" {
     {
         // TODO note that 0 = 256 words
         uint8_t buffer[4] = {0};
-        mbed::SPI& spi = get_spi_handle((TCAN4551*)handle);
+        mbed::SPI& spi = get_spi_handle((TCAN455x*)handle);
         buffer[0] = ((data & 0xFF000000) >> 24);
         buffer[1] = ((data & 0x00FF0000) >> 16);
         buffer[2] |= ((data & 0x0000FF00) >> 8);
@@ -104,7 +104,7 @@ extern "C" {
      * @param[in] handle Handle of the TCAN instance
      */
     void tcan_spi_write_burst_end(tcan_handle_t handle) {
-        mbed::SPI& spi = get_spi_handle((TCAN4551*)handle);
+        mbed::SPI& spi = get_spi_handle((TCAN455x*)handle);
         spi.deselect();
     }
 
@@ -124,7 +124,7 @@ extern "C" {
         header |= (address & 0xFF00);
         header |= AHB_READ_OPCODE;
 
-        mbed::SPI& spi = get_spi_handle((TCAN4551*)handle);
+        mbed::SPI& spi = get_spi_handle((TCAN455x*)handle);
         spi.select();
 
         spi.write((const char*) &header, 4, NULL, 0);
@@ -144,7 +144,7 @@ extern "C" {
         uint8_t buffer[4] = {0};
         uint32_t returnValue = 0;
 
-        mbed::SPI& spi = get_spi_handle((TCAN4551*)handle);
+        mbed::SPI& spi = get_spi_handle((TCAN455x*)handle);
         spi.write(NULL, 0, (char*) buffer, 4);
 
         returnValue = (((uint32_t)buffer[0]) << 24)
@@ -161,7 +161,7 @@ extern "C" {
      * @param[in] handle Handle of the TCAN instance
      */
     void tcan_spi_read_burst_end(tcan_handle_t handle) {
-        mbed::SPI& spi = get_spi_handle((TCAN4551*)handle);
+        mbed::SPI& spi = get_spi_handle((TCAN455x*)handle);
         spi.deselect();
     }
 }

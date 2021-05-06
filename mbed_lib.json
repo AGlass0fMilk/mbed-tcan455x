@@ -1,5 +1,5 @@
 {
-    "name": "tcan4551",
+    "name": "tcan455x",
     "config": {
         "enable-fd": {
             "help": "Enable CAN flexible data rate (not compatible with CAN2.0a/b",

@@ -35,7 +35,7 @@
 /**
  * TCAN455x driver
  */
-class TCAN455x final : public mbed::interface::CAN, private mbed::NonCopyable<TCAN4551>
+class TCAN455x final : public mbed::interface::CAN, private mbed::NonCopyable<TCAN455x>
 {
 
 protected:
@@ -216,8 +216,8 @@ protected:
      *  @retval Index of allocated handle in static array, -1 if out of memory
      */
     int alloc_sid_handle_index(void) {
-        if(standard_id_index < MBED_CONF_TCAN455X_SID_FILTER_COUNT) {
-            return standard_id_index++;
+        if(_standard_id_index < MBED_CONF_TCAN455X_SID_FILTER_COUNT) {
+            return _standard_id_index++;
         } else {
             return -1;
         }
@@ -227,8 +227,8 @@ protected:
      *  Internal function to allocate an extended ID filter handle
      *  @retval Index of allocated handle in static array, -1 if out of memory
      */int alloc_xid_handle_index(void) {
-        if(extended_id_index < MBED_CONF_TCAN455X_XID_FILTER_COUNT) {
-            return (MBED_CONF_TCAN455X_SID_FILTER_COUNT + extended_id_index++);
+        if(_extended_id_index < MBED_CONF_TCAN455X_XID_FILTER_COUNT) {
+            return (MBED_CONF_TCAN455X_SID_FILTER_COUNT + _extended_id_index++);
         } else {
             return -1;
         }
@@ -244,7 +244,7 @@ protected:
      /**
       * Used by the underlying TI driver
       */
-     friend mbed::SPI &get_spi_handle(TCAN4551 *ptr);
+     friend mbed::SPI &get_spi_handle(TCAN455x *ptr);
 
 protected:
 
