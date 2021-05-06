@@ -15,8 +15,8 @@
  * limitations under the License
  */
 
-#ifndef MBED_TCAN4551_TCAN4551_H_
-#define MBED_TCAN4551_TCAN4551_H_
+#ifndef MBED_TCAN455X_TCAN455X_H_
+#define MBED_TCAN455X_TCAN455X_H_
 
 #include "drivers/CAN.h"
 #include "drivers/SPI.h"
@@ -25,12 +25,12 @@
 
 #include "TCAN4x5x_Data_Structs.h"
 
-#define TCAN4551_TOTAL_FILTER_COUNT (MBED_CONF_TCAN4551_SID_FILTER_COUNT+MBED_CONF_TCAN4551_XID_FILTER_COUNT)
+#define TCAN455X_TOTAL_FILTER_COUNT (MBED_CONF_TCAN455X_SID_FILTER_COUNT+MBED_CONF_TCAN455X_XID_FILTER_COUNT)
 
 /**
- * TCAN4551 driver
+ * TCAN455x driver
  */
-class TCAN4551
+class TCAN455x
 {
 
 protected:
@@ -57,7 +57,7 @@ protected:
 public:
 
     /**
-     * Create a TCAN4551 interface
+     * Create a TCAN455x interface
      * @param[in] mosi MOSI pin name to use for SPI
      * @param[in] miso MISO pin name to use for SPI
      * @param[in] sclk SCLK pin name to use for SPI
@@ -66,17 +66,17 @@ public:
      * @param[in] rst (Optional) Hardware reset control, if used (active high)
      * @param[in] wake_ctl (Optional) Wake control output (active high). Pulls WAKE pin low through an external transistor
      */
-    TCAN4551(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
+    TCAN455x(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
             mbed::DigitalOut* rst = nullptr, mbed::DigitalOut* wake_ctl = nullptr);
 
-    virtual ~TCAN4551();
+    virtual ~TCAN455x();
 
     /**
-     * Gets the TCAN4551 driver associated with the given CAN object
+     * Gets the TCAN455x driver associated with the given CAN object
      * @param[in] can_handle Handle of Mbed CAN object
      * @retval tcan Corresponding TCAN driver object
      */
-//    static TCAN4551& get_tcan_handle(mbed::CAN& can_handle);
+//    static TCAN455x& get_tcan_handle(mbed::CAN& can_handle);
 
     virtual void init(void);
 
@@ -117,12 +117,12 @@ public:
     void disable_irq(CanIrqType type);
 
     /**
-     * Write a CANMessage to the TCAN4551
+     * Write a CANMessage to the TCAN455x
      */
     virtual int write(CAN_Message msg, int cc);
 
     /**
-     * Read a CANMessage from the TCAN4551
+     * Read a CANMessage from the TCAN455x
      */
     virtual int read(CAN_Message* msg, int handle = 0);
 
@@ -148,7 +148,7 @@ public:
     virtual int filter(unsigned int id, unsigned int mask, CANFormat format = CANAny, int handle = 0);
 
     /**
-     * Resets the TCAN4551
+     * Resets the TCAN455x
      *
      * @note init must be called again after calling reset!
      */
@@ -162,7 +162,7 @@ public:
 
 
 
-#if MBED_CONF_TCAN4551_ENABLE_FD && DEVICE_CANFD
+#if MBED_CONF_TCAN455X_ENABLE_FD && DEVICE_CANFD
 
     /**
      * Sets the packet size of the transmission
@@ -234,7 +234,7 @@ protected:
      *  @retval Index of allocated handle in static array, -1 if out of memory
      */
     int alloc_sid_handle_index(void) {
-        if(standard_id_index < MBED_CONF_TCAN4551_SID_FILTER_COUNT) {
+        if(standard_id_index < MBED_CONF_TCAN455X_SID_FILTER_COUNT) {
             return standard_id_index++;
         } else {
             return -1;
@@ -245,23 +245,23 @@ protected:
      *  Internal function to allocate an extended ID filter handle
      *  @retval Index of allocated handle in static array, -1 if out of memory
      */int alloc_xid_handle_index(void) {
-        if(extended_id_index < MBED_CONF_TCAN4551_XID_FILTER_COUNT) {
-            return (MBED_CONF_TCAN4551_SID_FILTER_COUNT + extended_id_index++);
+        if(extended_id_index < MBED_CONF_TCAN455X_XID_FILTER_COUNT) {
+            return (MBED_CONF_TCAN455X_SID_FILTER_COUNT + extended_id_index++);
         } else {
             return -1;
         }
     }
 
      /**
-      * Copies a TCAN4551-format header over to Mbed's CAN_Message format
+      * Copies a TCAN455x-format header over to Mbed's CAN_Message format
       * @param[in] msg Mbed CAN_Message struct destination
-      * @param[in] header TCAN4551 rx header struct source
+      * @param[in] header TCAN455x rx header struct source
       */
      static void copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* header);
 
 protected:
 
-    mbed::SPI spi;                  /** SPI interface to TCAN4551 */
+    mbed::SPI spi;                  /** SPI interface to TCAN455x */
     mbed::InterruptIn nint;         /** nINT interrupt input pin */
     mbed::DigitalOut* _rst;         /** RST output */
     mbed::DigitalOut* _wake_ctl;   /** Wake control output */
@@ -279,12 +279,12 @@ protected:
     /**
      * Array of filtered buffer control blocks
      * The SID filters come first (starting at index 0)
-     * and the XID filters come after that (starting at MBED_CONF_TCAN4551_SID_FILTER_COUNT)
+     * and the XID filters come after that (starting at MBED_CONF_TCAN455X_SID_FILTER_COUNT)
      */
-    filtered_buffer_t filtered_buffers[TCAN4551_TOTAL_FILTER_COUNT];
+    filtered_buffer_t filtered_buffers[TCAN455X_TOTAL_FILTER_COUNT];
     int standard_id_index;
     int extended_id_index;
 
 };
 
-#endif /* MBED_TCAN4551_TCAN4551_H_ */
+#endif /* MBED_TCAN455X_TCAN455X_H_ */
