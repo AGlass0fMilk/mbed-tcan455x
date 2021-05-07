@@ -47,6 +47,9 @@ void TCAN455x::init(void) {
 
     mbed::ScopedLock<PlatformMutex> lock(_mutex);
 
+    /* Reset the chip to initial state (this also puts the reset output into the correct state) */
+    reset();
+
     if(_initialized) {
         return;
     }
@@ -191,6 +194,8 @@ void TCAN455x::init(void) {
 
     // Set up the interrupt input
     this->_nint.fall(mbed::callback(this, &TCAN455x::_tcan_irq_handler));
+
+    _initialized = true;
 
 }
 
