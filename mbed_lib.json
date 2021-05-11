@@ -12,6 +12,14 @@
         "xid-filter-count": {
             "help": "Configure the number of extended (29-bit ID) filters",
             "value": 3
+        },
+        "rx0-fifo-size": {
+            "help": "Number of CAN messages that can fit in RX0FIFO, the unfiltered message FIFO",
+            "value": 5
+        },
+        "rx1-fifo-size": {
+            "help": "Number of CAN messages that can fit in RX1FIFO, the filtered message FIFO",
+            "value": 5
         }
     }
 }

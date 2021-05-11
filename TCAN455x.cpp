@@ -28,15 +28,15 @@
 
 #include "mbed_trace.h"
 
-#define TRACE_GROUP "tcan"
+#define TRACE_GROUP "TCAN"
 
 TCAN455x::TCAN455x(PinName mosi, PinName miso, PinName sclk, PinName csn, PinName nint_pin,
         mbed::DigitalOut* rst, mbed::DigitalOut* wake_ctl) : _spi(mosi, miso, sclk, csn, mbed::use_gpio_ssel), _nint(nint_pin, PullUp),
-        _rst(rst), _wake_ctl(wake_ctl), _read_errors(0), _write_errors(0),
-        _standard_id_index(0), _extended_id_index(0)
+        _rst(rst), _wake_ctl(wake_ctl), _read_errors(0), _write_errors(0)
 {
     for(int i = 0; i < TCAN455X_TOTAL_FILTER_COUNT; i++) {
-        memset(&_filtered_buffers[i], 0, sizeof(filtered_buffer_t));
+        _filter_handles[i].sid_filter = nullptr;
+        _filter_handles[i].xid_filter = nullptr;
     }
 }
 
@@ -90,7 +90,7 @@ void TCAN455x::init(void) {
     TCANDataTiming.DataTqAfterSamplePoint = 5;
 
     /* Configure the MCAN core settings */
-    _cccr_config = {0};                     // Remember to initialize to 0, or you'll get random garbage!
+    _cccr_config = {0};                                               // Remember to initialize to 0, or you'll get random garbage!
     _cccr_config.FDOE = 0;                                            // CAN FD mode disable
     _cccr_config.BRSE = 0;                                            // CAN FD Bit rate switch disable
 
@@ -117,9 +117,9 @@ void TCAN455x::init(void) {
     TCAN4x5x_MRAM_Config MRAMConfiguration = {0};
     MRAMConfiguration.SIDNumElements = MBED_CONF_TCAN455X_SID_FILTER_COUNT; // Standard ID number of elements, you MUST have a filter written to MRAM for each element defined
     MRAMConfiguration.XIDNumElements = MBED_CONF_TCAN455X_XID_FILTER_COUNT; // Extended ID number of elements, you MUST have a filter written to MRAM for each element defined
-    MRAMConfiguration.Rx0NumElements = 5;                       // RX0 Number of elements
+    MRAMConfiguration.Rx0NumElements = MBED_CONF_TCAN455X_RX0_FIFO_SIZE;    // RX0 Number of elements
     MRAMConfiguration.Rx0ElementSize = MRAM_8_Byte_Data;        // RX0 data payload size
-    MRAMConfiguration.Rx1NumElements = 5;                       // RX1 number of elements
+    MRAMConfiguration.Rx1NumElements = MBED_CONF_TCAN455X_RX1_FIFO_SIZE;    // RX1 number of elements
     MRAMConfiguration.Rx1ElementSize = MRAM_8_Byte_Data;        // RX1 data payload size
     MRAMConfiguration.RxBufNumElements = 0;                     // RX buffer number of elements
     MRAMConfiguration.RxBufElementSize = MRAM_64_Byte_Data;     // RX buffer data payload size
@@ -150,7 +150,9 @@ void TCAN455x::init(void) {
 
     /* Setup standard filters */
     for(int i = 0; i < MBED_CONF_TCAN455X_SID_FILTER_COUNT; i++) {
-        TCAN4x5x_MCAN_SID_Filter* SID_ID = &_filtered_buffers[i].sid_filter;
+        _sid_filters[i].tcan_filter_index = i;
+        _sid_filters[i].is_in_use = false;
+        TCAN4x5x_MCAN_SID_Filter* SID_ID = &_sid_filters[i].filter;
         *SID_ID = {0};
         SID_ID->SFT = TCAN4x5x_SID_SFT_CLASSIC;                      // SFT: Standard filter type. Configured as a classic filter
         SID_ID->SFEC = TCAN4x5x_SID_SFEC_DISABLED;                   // Standard filter element configuration, initially disabled
@@ -161,7 +163,9 @@ void TCAN455x::init(void) {
 
     /* Setup extended filters */
     for(int i = 0; i < MBED_CONF_TCAN455X_XID_FILTER_COUNT; i++) {
-        TCAN4x5x_MCAN_XID_Filter* XID_ID = &_filtered_buffers[MBED_CONF_TCAN455X_SID_FILTER_COUNT+i].xid_filter;
+        _xid_filters[i].tcan_filter_index = i;
+        _xid_filters[i].is_in_use = false;
+        TCAN4x5x_MCAN_XID_Filter* XID_ID = &_xid_filters[i].filter;
         *XID_ID = {0};
         XID_ID->EFT = TCAN4x5x_XID_EFT_CLASSIC;                  // EFT
         XID_ID->EFEC = TCAN4x5x_XID_EFEC_DISABLED;               // EFEC, initially disabled
@@ -256,6 +260,11 @@ int TCAN455x::frequency(int hz) {
 
 int TCAN455x::write(mbed::CANMessage msg) {
 
+    /* Reject a message with CANAny as the format */
+    if(msg.format == CANAny) {
+        return 0;
+    }
+
     /* Lazy initialization */
     initialize_if();
 
@@ -297,6 +306,11 @@ int TCAN455x::read(mbed::CANMessage &msg, int handle) {
 
     mbed::ScopedLock<PlatformMutex> lock(_mutex);
 
+    /* Reject out of range handles */
+    if(handle < 0 || handle > TCAN455X_TOTAL_FILTER_COUNT) {
+        return 0;
+    }
+
     TCAN4x5x_MCAN_Interrupts mcan_ir = {0};
     TCAN4x5x_MCAN_ReadInterrupts(this, &mcan_ir);
 
@@ -309,53 +323,55 @@ int TCAN455x::read(mbed::CANMessage &msg, int handle) {
 
     TCAN4x5x_MCAN_ClearInterrupts(this, &mcan_ir);
 
-    // See if any of the filtered buffers have a new message for the desired filter
-    if(handle != 0) {
-        filtered_buffer_t* buffer = &_filtered_buffers[filter_handle_to_index(handle)];
-        if(buffer->new_data_available) {
-            // New data has been stored in the local buffers, copy it over
-            copy_tcan_rx_header(&msg, &buffer->rx_header);
-            memcpy(msg.data, buffer->data, buffer->rx_header.DLC);
-            buffer->new_data_available = false;
-            return 1;
-        } else {
-            // See if the FIFO1 has a new filtered message for us
-            uint8_t num_bytes = 0;
-            num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO1, &buffer->rx_header, buffer->data);
-            if(num_bytes == 0) {
-                return 0; // No filtered messages received
-            }
-
-            // Make sure this new filtered message matches the given filter
-            uint32_t filter_id = (buffer->rx_header.XTD?
-                                  buffer->xid_filter.EFID1 : buffer->sid_filter.SFID1);
-            if(filter_id == buffer->rx_header.ID) {
-                // Filter matches, copy it over and return it
-                copy_tcan_rx_header(&msg, &buffer->rx_header);
-                memcpy(msg.data, buffer->data, num_bytes);
-                return 1;
+    // Read out all messages from RXFIFO0 (unfiltered messages)
+    uint8_t num_bytes = 0;
+    tcan455x_message_t tcan_msg;
+    do {
+        num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO0, &tcan_msg.rx_header, tcan_msg.data);
+        if(num_bytes) {
+            if(!_unfiltered_buffer.full()) {
+                _unfiltered_buffer.push(tcan_msg);
             } else {
-                // Otherwise, we stored it in the temporary buffer so flag it
-                buffer->new_data_available = true;
-                return 0;
+                tr_warn("unfiltered messages buffer overflow");
+                _read_errors++;
             }
+        }
+    } while(num_bytes);
+
+    // Read out all messages from RXFIFO1 (filtered messages)
+    do {
+        num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO1, &tcan_msg.rx_header, tcan_msg.data);
+        if(num_bytes) {
+            // Get the associated filter handle
+            int filter_index = 0;
+            tcan455x_filter_handle_t *filter_handle = get_associated_filter_handle(&tcan_msg.rx_header, &filter_index);
+            if(filter_handle) {
+                if(!filter_handle->buffer.full()) {
+                    filter_handle->buffer.push(tcan_msg);
+                } else {
+                    tr_warn("buffer overflow on filter handle %d", filter_index);
+                    _read_errors++;
+                }
+            } else {
+                tr_warn("received message for invalid filter handle");
+            }
+        }
+    } while(num_bytes);
+
+    // Try to get a message from the specified handle
+    if(handle == 0) {
+        if(!_unfiltered_buffer.pop(tcan_msg)) {
+            return 0;
         }
     } else {
-        // Attempt to read FIFO0 (unfiltered messages)
-
-        TCAN4x5x_MCAN_RX_Header msg_header = {0};
-        uint8_t num_bytes = 0;
-
-        num_bytes = TCAN4x5x_MCAN_ReadNextFIFO(this, RXFIFO0, &msg_header, msg.data);
-
-        if(num_bytes == 0) {
-            return 0; // No message received
-        } else {
-            // Copy over the header information
-            copy_tcan_rx_header(&msg, &msg_header);
-            return 1;
+        if(!_filter_handles[handle-1].buffer.pop(tcan_msg)) {
+            return 0;
         }
     }
+
+    copy_tcan_rx_header(&msg, &tcan_msg.rx_header);
+    memcpy(msg.data, &tcan_msg.data, 8);
+    return 1;
 }
 
 void TCAN455x::reset(void) {
@@ -415,70 +431,24 @@ int TCAN455x::filter(unsigned int id, unsigned int mask, CANFormat format,
     /* Lazy initialization */
     initialize_if();
 
-    if(format == CANStandard) {
-
-        // Disallow accessing a filter handle beyond what's available
-        if(handle < 0 || handle >= MBED_CONF_TCAN455X_SID_FILTER_COUNT) {
-            return 0;
-        }
-
-        TCAN4x5x_MCAN_SID_Filter* handle_ptr;
-        int filter_index = filter_handle_to_index(handle);
-
-        // If the user didn't provide a valid handle
-        if(filter_index == -1) {
-            filter_index = alloc_sid_handle_index();   // Try to allocate one that's available
-            if(filter_index == -1) {               // No filters left to allocate :(
-                return 0;
-            }
-        }
-
-        // Get a pointer to the filter struct
-        handle_ptr = &_filtered_buffers[filter_index].sid_filter;
-
-        // Configure the filter and write it to the controller
-        handle_ptr->SFT = TCAN4x5x_SID_SFT_CLASSIC;
-        handle_ptr->SFEC = TCAN4x5x_SID_SFEC_STORERX1;
-        handle_ptr->SFID1 = id;
-        handle_ptr->SFID2 = mask;
-        TCAN4x5x_MCAN_WriteSIDFilter(this, filter_index, handle_ptr);
-        return filter_index_to_handle(filter_index);
-
-    } else
-    if(format == CANExtended) {
-
-        // Disallow accessing a filter handle beyond what's available
-        if(handle != 0) {
-            if(handle < MBED_CONF_TCAN455X_SID_FILTER_COUNT || handle >= TCAN455X_TOTAL_FILTER_COUNT) {
-                return 0;
-            }
-        }
-
-        TCAN4x5x_MCAN_XID_Filter* handle_ptr;
-        int filter_index = filter_handle_to_index(handle);
-
-        // If the user didn't provide a valid handle
-        if(filter_index == -1) {
-            filter_index = alloc_xid_handle_index();   // Try to allocate one that's available
-            if(filter_index == -1) {               // No filters left to allocate :(
-                return 0;
-            }
-        }
-
-        // Get a pointer to the filter struct
-        handle_ptr = &_filtered_buffers[filter_index].xid_filter;
-
-        // Configure the filter and write it to the controller
-        handle_ptr->EFT = TCAN4x5x_XID_EFT_CLASSIC;
-        handle_ptr->EFEC = TCAN4x5x_XID_EFEC_STORERX1;
-        handle_ptr->EFID1 = id;
-        handle_ptr->EFID2 = mask;
-        TCAN4x5x_MCAN_WriteXIDFilter(this, filter_index, handle_ptr);
-        return filter_index_to_handle(filter_index);
-    }
-    else {
-        // Invalid input
+    // Disallow accessing a filter handle beyond what's available
+    if(handle < 0 || handle > TCAN455X_TOTAL_FILTER_COUNT) {
         return 0;
+    }
+
+    if(handle == 0) {
+        // Try to add a filter with an internally-assigned handle
+        return add_filter(id, mask, format, handle);
+    } else {
+        tcan455x_filter_handle_t *filter = &_filter_handles[handle-1];
+
+        // Check if we're accessing an already assigned filter
+        if(filter->sid_filter || filter->xid_filter) {
+            // If so, remove this filter so we can add a new one
+            remove_filter(filter);
+        }
+
+        return add_filter(id, mask, format, handle);
     }
 }
 
@@ -500,7 +470,7 @@ void TCAN455x::apply_bitrate_change(TCAN4x5x_MCAN_Nominal_Timing_Simple timing) 
 
 void TCAN455x::_tcan_irq_handler(void) {
 
-    tr_info("tcan irq handler called");
+    tr_debug("tcan irq handler called");
 
     /**
      * Since we can't access the SPI bus to read the interrupt source
@@ -522,11 +492,156 @@ void TCAN455x::_tcan_irq_handler(void) {
 
 }
 
+int TCAN455x::add_filter(unsigned int id, unsigned int mask, CANFormat format, int handle) {
+
+    /* If the handle is 0, get one that's free */
+    tcan455x_filter_handle_t *filter_handle;
+    if(handle == 0) {
+        filter_handle = get_available_filter_handle(&handle);
+        if(!filter_handle) {
+            tr_warn("no filter handles available");
+            return 0;
+        }
+    } else {
+        filter_handle = &_filter_handles[handle-1];
+    }
+
+    /* Add standard filter */
+    if(format == CANStandard || format == CANAny) {
+        if(id > 0x7FF) {
+            tr_warn("cannot add standard/CANAny filter with ID greater than 0x7FF");
+            return 0;
+        }
+
+        tcan455x_sid_filter_handle_t *tcan_filter = allocate_sid_filter_handle();
+        if(!tcan_filter) {
+            tr_warn("could not allocate an sid filter handle");
+            return 0;
+        }
+
+        filter_handle->sid_filter = tcan_filter;
+        filter_handle->sid_filter->filter.SFT = TCAN4x5x_SID_SFT_CLASSIC;
+        filter_handle->sid_filter->filter.SFEC = TCAN4x5x_SID_SFEC_STORERX1;
+        filter_handle->sid_filter->filter.SFID1 = id;
+        filter_handle->sid_filter->filter.SFID2 = mask;
+        TCAN4x5x_MCAN_WriteSIDFilter(this, filter_handle->sid_filter->tcan_filter_index, &filter_handle->sid_filter->filter);
+
+    }
+
+    if(format == CANExtended || format == CANAny) {
+        if(id > 0x1FFFFFFF) {
+            tr_warn("cannot add extended filter with ID greater than 0x1FFFFFFF");
+            return 0;
+        }
+
+        tcan455x_xid_filter_handle_t *tcan_filter = allocate_xid_filter_handle();
+        if(!tcan_filter) {
+            /* If this is a CANAny filter and we successfully added an SID filter above, remove it */
+            remove_filter(filter_handle);
+            tr_warn("could not allocate an xid filter handle");
+            return 0;
+        }
+
+        filter_handle->xid_filter = tcan_filter;
+        filter_handle->xid_filter->filter.EFT = TCAN4x5x_XID_EFT_CLASSIC;
+        filter_handle->xid_filter->filter.EFEC = TCAN4x5x_XID_EFEC_STORERX1;
+        filter_handle->xid_filter->filter.EFID1 = id;
+        filter_handle->xid_filter->filter.EFID2 = mask;
+        TCAN4x5x_MCAN_WriteXIDFilter(this, filter_handle->xid_filter->tcan_filter_index, &filter_handle->xid_filter->filter);
+    }
+
+    return handle;
+
+}
+
+void TCAN455x::remove_filter(tcan455x_filter_handle_t *handle) {
+
+    /* Disable the filter(s) in the TCAN and decrement counts */
+    if(handle->sid_filter) {
+        handle->sid_filter->filter.SFEC = TCAN4x5x_SID_SFEC_DISABLED;
+        TCAN4x5x_MCAN_WriteSIDFilter(this, handle->sid_filter->tcan_filter_index, &handle->sid_filter->filter);
+        free_sid_filter_handle(handle->sid_filter);
+        handle->sid_filter = nullptr;
+    }
+
+    if(handle->xid_filter) {
+        handle->xid_filter->filter.EFEC = TCAN4x5x_XID_EFEC_DISABLED;
+        TCAN4x5x_MCAN_WriteXIDFilter(this, handle->xid_filter->tcan_filter_index, &handle->xid_filter->filter);
+        free_xid_filter_handle(handle->xid_filter);
+        handle->xid_filter = nullptr;
+    }
+
+}
+
+TCAN455x::tcan455x_xid_filter_handle_t* TCAN455x::allocate_xid_filter_handle() {
+    for(int i = 0; i < MBED_CONF_TCAN455X_XID_FILTER_COUNT; i++) {
+        if(!_xid_filters[i].is_in_use) {
+            _xid_filters[i].is_in_use = true;
+            return &_xid_filters[i];
+        }
+    }
+
+    /* Could not find one to allocate, return nullptr */
+    return nullptr;
+}
+
+TCAN455x::tcan455x_sid_filter_handle_t* TCAN455x::allocate_sid_filter_handle() {
+
+    for(int i = 0; i < MBED_CONF_TCAN455X_SID_FILTER_COUNT; i++) {
+        if(!_sid_filters[i].is_in_use) {
+            _sid_filters[i].is_in_use = true;
+            return &_sid_filters[i];
+        }
+    }
+
+    /* Could not find one to allocate, return nullptr */
+    return nullptr;
+}
+
+TCAN455x::tcan455x_filter_handle_t* TCAN455x::get_available_filter_handle(int *handle) {
+
+    tcan455x_filter_handle_t* retval = nullptr;
+    for(int i = 0; i < TCAN455X_TOTAL_FILTER_COUNT; i++) {
+        /* Unassigned filter */
+        tcan455x_filter_handle_t* filter_handle = &_filter_handles[i];
+        if(!filter_handle->sid_filter && !filter_handle->xid_filter) {
+            *handle = i+1;
+            retval = filter_handle;
+            break;
+        }
+    }
+
+    return retval;
+}
+
 void TCAN455x::copy_tcan_rx_header(CAN_Message* msg, TCAN4x5x_MCAN_RX_Header* header) {
     msg->id = header->ID;
     msg->len = header->DLC;
     msg->format = (header->XTD? CANExtended : CANStandard);
     msg->type = CANData;
+}
+
+TCAN455x::tcan455x_filter_handle_t* TCAN455x::get_associated_filter_handle(
+        TCAN4x5x_MCAN_RX_Header *rx_header,
+        int *index) {
+    for(int i = 0; i < TCAN455X_TOTAL_FILTER_COUNT; i++) {
+        tcan455x_filter_handle_t *handle = &_filter_handles[i];
+        if(rx_header->XTD && handle->xid_filter) {
+            if(handle->xid_filter->tcan_filter_index == rx_header->FIDX) {
+                *index = i;
+                return handle;
+            }
+        }
+
+        if(!rx_header->XTD && handle->sid_filter) {
+            if(handle->sid_filter->tcan_filter_index == rx_header->FIDX) {
+                *index = i;
+                return handle;
+            }
+        }
+    }
+
+    return nullptr;
 }
 
 #endif /** DEVICE_SPI */

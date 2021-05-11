@@ -27,10 +27,16 @@
 
 #include "platform/NonCopyable.h"
 #include "platform/PlatformMutex.h"
+#include "platform/CircularBuffer.h"
 
 #include "TCAN4x5x_Data_Structs.h"
 
 #define TCAN455X_TOTAL_FILTER_COUNT (MBED_CONF_TCAN455X_SID_FILTER_COUNT+MBED_CONF_TCAN455X_XID_FILTER_COUNT)
+
+// TODO simplify the filter logic... it could probably be made more straightforward and compact (but at least it's tested)
+// TODO it would be nice to have a way to detect TX interrupts as well as RX interrupts.
+// TODO currently, if TX requests happen too quickly it is possible for the TX buffer to be overwritten before the TCAN sends out a previous TX request.
+// TODO ^^^ This hasn't happened in basic tests, but in the real world the bus may be unavailable long enough to cause this issue.
 
 /**
  * TCAN455x driver
@@ -40,24 +46,30 @@ class TCAN455x final : public mbed::interface::CAN, private mbed::NonCopyable<TC
 
 protected:
 
-    /**
-     * Filtered buffer control structure
-     *
-     * Since filtered messages are stored in a FIFO, we
-     * must store them in a buffer if the application
-     * reads the FIFO looking for messages from one filter
-     * and subsequently dequeues messages from another filter
-     */
-    typedef struct filtered_buffer_t {
-        TCAN4x5x_MCAN_RX_Header rx_header;
-        bool new_data_available;
-        union {
-            TCAN4x5x_MCAN_SID_Filter sid_filter;
-            TCAN4x5x_MCAN_XID_Filter xid_filter;
-        };
-        uint8_t data[8]; // TODO - update this to be configurable in size
-    } filtered_buffer_t;
 
+    struct tcan455x_message_t {
+        TCAN4x5x_MCAN_RX_Header rx_header;
+        uint8_t data[8]; // TODO - update this to be configurable in size
+    };
+
+    struct tcan455x_xid_filter_handle_t {
+        TCAN4x5x_MCAN_XID_Filter filter;
+        uint8_t tcan_filter_index;
+        bool is_in_use = false;
+    };
+
+    struct tcan455x_sid_filter_handle_t {
+        TCAN4x5x_MCAN_SID_Filter filter;
+        uint8_t tcan_filter_index;
+        bool is_in_use = false;
+    };
+
+    struct tcan455x_filter_handle_t {
+        /* Mbed CANAny filter type means we have both an XID and SID filter */
+        tcan455x_xid_filter_handle_t *xid_filter;
+        tcan455x_sid_filter_handle_t *sid_filter;
+        mbed::CircularBuffer<tcan455x_message_t, MBED_CONF_TCAN455X_RX1_FIFO_SIZE> buffer;
+    };
 
 public:
 
@@ -148,8 +160,6 @@ public:
     void attach(mbed::Callback<void()> func, IrqType type = IrqType::RxIrq) override;
 
 
-
-
 #if MBED_CONF_TCAN455X_ENABLE_FD && DEVICE_CANFD
 
     /**
@@ -190,6 +200,58 @@ protected:
     }
 
     /**
+     * Attempts to allocate an unused xid filter handle
+     * @retval ptr Pointer to allocated filter handle, nullptr if failed to allocate
+     */
+    tcan455x_xid_filter_handle_t *allocate_xid_filter_handle();
+
+    /**
+     * Frees an allocated xid filter handle
+     */
+    inline void free_xid_filter_handle(tcan455x_xid_filter_handle_t *handle) {
+        handle->is_in_use = false;
+    }
+
+    /**
+     * Attempts to allocate an unused sid filter handle
+     * @retval ptr Pointer to allocated filter handle, nullptr if failed to allocate
+     */
+    tcan455x_sid_filter_handle_t *allocate_sid_filter_handle();
+
+    /**
+     * Frees an allocated sid filter handle
+     */
+    inline void free_sid_filter_handle(tcan455x_sid_filter_handle_t *handle) {
+        handle->is_in_use = false;
+    }
+
+    /**
+     * Adds a filter
+     */
+    int add_filter(unsigned int id, unsigned int mask, CANFormat format, int handle);
+
+    /**
+     * Removes a filter and frees filter handles
+     * @param[in] handle Handle of filter to remove
+     */
+    void remove_filter(tcan455x_filter_handle_t *handle);
+
+    /**
+     * Gets an available Mbed filter handle
+     * @param[out] handle Handle number assigned (only valid if return value is not nullptr)
+     * @retval ptr Pointer to available filter control block, nullptr if none available
+     */
+    tcan455x_filter_handle_t *get_available_filter_handle(int *handle);
+
+    /**
+     * Gets the associated filter handle given an rx header
+     * @param[in] rx_header TCAN RX header to match to filter handle
+     * @param[out] index Index of filter handle received, only valid if return is not nullptr
+     * @retval ptr Pointer to filter handle
+     */
+    tcan455x_filter_handle_t *get_associated_filter_handle(TCAN4x5x_MCAN_RX_Header *rx_header, int *index);
+
+    /**
      * Internal function to apply bit rate changes
      * @param[in] bit rate struct to send to TCAN4x5x
      */
@@ -199,40 +261,6 @@ protected:
      * Internal interrupt handler
      */
     void _tcan_irq_handler(void);
-
-    /**
-     * 0 is not a valid handle, so map the index to a different number (add 1)
-     */
-    inline int filter_handle_to_index(int handle) {
-        return handle-1;
-    }
-
-    inline int filter_index_to_handle(int index) {
-        return index+1;
-    }
-
-    /*
-     *  Internal function to allocate a standard ID filter handle
-     *  @retval Index of allocated handle in static array, -1 if out of memory
-     */
-    int alloc_sid_handle_index(void) {
-        if(_standard_id_index < MBED_CONF_TCAN455X_SID_FILTER_COUNT) {
-            return _standard_id_index++;
-        } else {
-            return -1;
-        }
-    }
-
-    /*
-     *  Internal function to allocate an extended ID filter handle
-     *  @retval Index of allocated handle in static array, -1 if out of memory
-     */int alloc_xid_handle_index(void) {
-        if(_extended_id_index < MBED_CONF_TCAN455X_XID_FILTER_COUNT) {
-            return (MBED_CONF_TCAN455X_SID_FILTER_COUNT + _extended_id_index++);
-        } else {
-            return -1;
-        }
-    }
 
      /**
       * Copies a TCAN455x-format header over to Mbed's CAN_Message format
@@ -259,13 +287,22 @@ protected:
     TCAN4x5x_MCAN_CCCR_Config _cccr_config; /** TCAN configuration */
 
     /**
-     * Array of filtered buffer control blocks
-     * The SID filters come first (starting at index 0)
-     * and the XID filters come after that (starting at MBED_CONF_TCAN455X_SID_FILTER_COUNT)
+     * Array of buffers
+     *
+     * Since filtered/unfiltered messages are stored in a FIFO, we
+     * must store them in a buffer if the application
+     * reads the FIFO looking for messages from one filter
+     * and subsequently dequeues messages from another filter
+     *
      */
-    filtered_buffer_t _filtered_buffers[TCAN455X_TOTAL_FILTER_COUNT];
-    int _standard_id_index;
-    int _extended_id_index;
+    mbed::CircularBuffer<tcan455x_message_t, MBED_CONF_TCAN455X_RX0_FIFO_SIZE> _unfiltered_buffer;
+
+    /**
+     * Filter variables
+     */
+    tcan455x_filter_handle_t _filter_handles[TCAN455X_TOTAL_FILTER_COUNT];
+    tcan455x_sid_filter_handle_t _sid_filters[MBED_CONF_TCAN455X_SID_FILTER_COUNT] = {0};
+    tcan455x_xid_filter_handle_t _xid_filters[MBED_CONF_TCAN455X_XID_FILTER_COUNT] = {0};
 
     mbed::Callback<void()>    _irq[IrqType::IrqCnt];
 
