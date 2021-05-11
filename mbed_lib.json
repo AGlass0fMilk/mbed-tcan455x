@@ -14,11 +14,19 @@
             "value": 3
         },
         "rx0-fifo-size": {
-            "help": "Number of CAN messages that can fit in RX0FIFO, the unfiltered message FIFO",
+            "help": "Number of CAN messages that can fit in RX0FIFO, the unfiltered message FIFO in the TCAN's internal memory",
             "value": 5
         },
         "rx1-fifo-size": {
-            "help": "Number of CAN messages that can fit in RX1FIFO, the filtered message FIFO",
+            "help": "Number of CAN messages that can fit in RX1FIFO, the filtered message FIFO in the TCAN's internal memory",
+            "value": 5
+        },
+        "unfiltered-buffer-size": {
+            "help": "Number of CAN messages that can fit in the unfiltered message buffer",
+            "value": 5
+        },
+        "filtered-buffer-size": {
+            "help": "Number of CAN messages that can fit in EACH filter's message buffer",
             "value": 5
         }
     }

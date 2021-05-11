@@ -68,7 +68,7 @@ protected:
         /* Mbed CANAny filter type means we have both an XID and SID filter */
         tcan455x_xid_filter_handle_t *xid_filter;
         tcan455x_sid_filter_handle_t *sid_filter;
-        mbed::CircularBuffer<tcan455x_message_t, MBED_CONF_TCAN455X_RX1_FIFO_SIZE> buffer;
+        mbed::CircularBuffer<tcan455x_message_t, MBED_CONF_TCAN455X_FILTERED_BUFFER_SIZE> buffer;
     };
 
 public:
@@ -295,7 +295,7 @@ protected:
      * and subsequently dequeues messages from another filter
      *
      */
-    mbed::CircularBuffer<tcan455x_message_t, MBED_CONF_TCAN455X_RX0_FIFO_SIZE> _unfiltered_buffer;
+    mbed::CircularBuffer<tcan455x_message_t, MBED_CONF_TCAN455X_UNFILTERED_BUFFER_SIZE> _unfiltered_buffer;
 
     /**
      * Filter variables
