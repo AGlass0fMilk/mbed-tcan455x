@@ -231,28 +231,28 @@ int TCAN455x::frequency(int hz) {
         TCANNomTiming.NominalTqBeforeSamplePoint = 32;
         TCANNomTiming.NominalTqAfterSamplePoint = 8;
         apply_bitrate_change(TCANNomTiming);
-        return hz;
+        return 1;
     } else if(hz == 500E3) { // 500Kbps
         // 500Kbit arbitration with a 40 MHz crystal ((40E6 / 2) / (32 + 8) = 500E3)
         TCANNomTiming.NominalBitRatePrescaler = 2;
         TCANNomTiming.NominalTqBeforeSamplePoint = 32;
         TCANNomTiming.NominalTqAfterSamplePoint = 8;
         apply_bitrate_change(TCANNomTiming);
-        return hz;
+        return 1;
     } else if(hz == 250E3) { // 250Kbps
         // 250Kbit arbitration with a 40 MHz crystal ((40E6 / 4) / (32 + 8) = 250E3)
         TCANNomTiming.NominalBitRatePrescaler = 4;
         TCANNomTiming.NominalTqBeforeSamplePoint = 32;
         TCANNomTiming.NominalTqAfterSamplePoint = 8;
         apply_bitrate_change(TCANNomTiming);
-        return hz;
+        return 1;
     } else if(hz == 100E3) { // 100Kbps
         // 1Mbit arbitration with a 40 MHz crystal ((40E6 / 10) / (32 + 8) = 100E3)
         TCANNomTiming.NominalBitRatePrescaler = 10;
         TCANNomTiming.NominalTqBeforeSamplePoint = 32;
         TCANNomTiming.NominalTqAfterSamplePoint = 8;
         apply_bitrate_change(TCANNomTiming);
-        return hz;
+        return 1;
     } else {
         return 0;
     }
