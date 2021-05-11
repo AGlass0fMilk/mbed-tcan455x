@@ -1,7 +1,5 @@
 /*
- * Mbed-OS Microcontroller Library
- * Copyright (c) 2020 Embedded Planet
- * Copyright (c) 2020 ARM Limited
+ * Copyright (c) 2020 George Beckstein
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
